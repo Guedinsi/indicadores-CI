@@ -1,0 +1,14 @@
+Propostas de projeto integrador
+
+// externo
+1. [PEGO] advogado: sistema de gerenciamento de alugueis (web) 
+2. [PEGO] sistema de crowdsourcing ou geo referenciamente para encontrar vagas de estacionamento em grande cidades (mobile)
+3. [PEGO] (continuação) empresa: sistema de visualização computacional para detectar erros em circuitos integrados (web)
+4. [PEGO] empresa: sistema de correção e gameificação de redações do ENEM (web)
+
+// interno
+5. [PEGO] (continuação) Plano Terapeutico Singular 
+6. [PEGO] (continuação) plataforma para gerenciamento e reserva de créditos de biodiversidade
+7. [PEGO] sistema de gerenciamento de ativiades no github
+
+Não conseguimos pegar um projeto ainda. Aguardar resposta do professor na próxima semana
