@@ -1,0 +1,42 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Variáveis de ambiente (só o .env.example vai pro repositório)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testes e cobertura
+coverage/
+.nyc_output/
+
+# Docker (dados locais, se usar bind mounts)
+pgdata/
+docker-compose.override.yml
+
+# IDE e sistema operacional
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dados baixados das bases públicas (se forem grandes)
+data/raw/
+*.csv
+*.xlsx

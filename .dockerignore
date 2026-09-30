@@ -1,0 +1,36 @@
+# Dependências (são reinstaladas dentro da imagem)
+**/node_modules
+.pnpm-store
+
+# Builds locais
+**/dist
+**/.next
+**/*.tsbuildinfo
+
+# Segredos e ambiente
+.env
+.env.*
+
+# Git e CI
+.git
+.gitignore
+.github
+
+# Docker (não precisam entrar na imagem)
+Dockerfile*
+docker-compose*.yml
+docker/
+.dockerignore
+
+# Logs, testes e cobertura
+**/*.log
+**/coverage
+
+# IDE e sistema operacional
+.vscode
+.idea
+.DS_Store
+
+# Documentação e dados
+*.md
+data/
