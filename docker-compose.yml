@@ -5,8 +5,10 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports: ["5432:5432"]
-    volumes: [pgdata:/var/lib/postgresql/data]
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -20,7 +22,8 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
-    ports: ["3001:3001"]
+    ports:
+      - "3001:3001"
     depends_on:
       db:
         condition: service_healthy
@@ -29,11 +32,14 @@ services:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     environment:
       API_URL_INTERNAL: http://api:3001
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-    ports: ["3000:3000"]
-    depends_on: [api]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   pgdata:
