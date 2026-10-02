@@ -1,11 +1,11 @@
 {
-  "name": "indicadores-cm",
+  "name": "indicadores-ci",
   "private": true,
   "packageManager": "pnpm@12.8.1",
   "engines": { "node": ">=20" },
   "scripts": {
-    "dev:api": "pnpm --filter api start:dev",
-    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api run start:dev",
+    "dev:web": "pnpm --filter web run dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "docker:up": "docker compose up --build",
