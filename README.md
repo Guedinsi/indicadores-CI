@@ -59,14 +59,21 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 
 ### Variáveis de ambiente
 
-| Variável | Descrição |
-|---|---|
-| `DB_HOST`, `DB_PORT` | Endereço do PostgreSQL. Use `localhost` ao rodar a API fora do Docker. |
-| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Credenciais e nome do banco. |
-| `API_PORT` | Porta da API (padrão `3001`). |
-| `WEB_URL` | URL do front, usada no CORS da API. |
-| `NEXT_PUBLIC_API_URL` | URL da API acessada pelo navegador. É embutida no build do Next. |
-| `API_URL_INTERNAL` | URL da API acessada pelo servidor do Next dentro do Docker (`http://api:3001`). |
+| Variável| 
+(Descrição)
+-----------
+|`DB_HOST`, `DB_PORT`| 
+(Endereço do PostgreSQL. Use `localhost` ao rodar a API fora do Docker.) 
+|`DB_USER`, `DB_PASSWORD`, `DB_NAME`| 
+(Credenciais e nome do banco.) 
+|`API_PORT`| 
+(Porta da API (padrão `3001`).) 
+|`WEB_URL`| 
+(URL do front, usada no CORS da API.) 
+|`NEXT_PUBLIC_API_URL`|
+(URL da API acessada pelo navegador. É embutida no build do Next.)
+|`API_URL_INTERNAL`|
+(URL da API acessada pelo servidor do Next dentro do Docker (`http://api:3001`).)
 
 ## Desenvolvimento local
 
@@ -76,6 +83,12 @@ Fluxo recomendado para o dia a dia, com hot reload: apps rodando na máquina e a
 docker compose up -d db    # sobe somente o PostgreSQL
 pnpm dev:api               # API em http://localhost:3001
 pnpm dev:web               # Web em http://localhost:3000
+```
+
+Caso ocorra o erro Permission Denied ao rodar o docker, adicione o usuário ao grupo do docker:
+```bash
+sudo usermod -aG docker $USER
+su -l $USER
 ```
 
 Rode cada app em um terminal separado.
@@ -145,11 +158,11 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 
 ## Endereços locais
 
-| Serviço | URL |
-|---|---|
-| Web | http://localhost:3000 |
-| API | http://localhost:3001 |
-| PostgreSQL | localhost:5432 |
+| Serviço    | URL                   |
+|------------|-----------------------|
+| Web        | http://localhost:3000 |
+| API        | http://localhost:3001 |
+| PostgreSQL | localhost:5432        |
 
 ## Fluxo de contribuição
 

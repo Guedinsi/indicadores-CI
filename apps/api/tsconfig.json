@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -14,20 +15,12 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
+    //"baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "types": ["vitest/globals", "node"],
-    "extends": "../../tsconfig.base.json",
-    "compilerOptions": {
-      "outDir": "./dist",
-      "baseUrl": "./",
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true,
-      "strictPropertyInitialization": false,
-      "incremental": true
-    },
-    "include": ["src/**/*"]
-  }
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["src/**/*"]
 }
