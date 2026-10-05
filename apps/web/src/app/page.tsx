@@ -1,69 +1,201 @@
 import Image from "next/image";
 
+
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main className="min-h-screen bg-gray-100 p-6">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Dashboard de Indicadores
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-2 text-gray-600">
+            Indicadores de Campo Mourão
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </header>
+
+        <section className="mb-8 rounded-lg bg-white p-6 shadow">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Filtros
+          </h2>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="categoria"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Categoria
+              </label>
+
+              <select
+                id="categoria"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 outline-none focus:border-gray-500"
+                defaultValue="todas"
+              >
+                <option value="todas">Todas</option>
+                <option value="economia">Economia</option>
+                <option value="desenvolvimento">
+                  Desenvolvimento
+                </option>
+                <option value="educacao">Educação</option>
+                <option value="saude">Saúde</option>
+                <option value="cultura">Cultura</option>
+                <option value="gestao">Gestão</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="indicador"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Indicador
+              </label>
+
+              <select
+                id="indicador"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 outline-none focus:border-gray-500"
+                defaultValue="todos"
+              >
+                <option value="todos">Todos</option>
+                <option value="ifgf">IFGF</option>
+                <option value="ifdm">IFDM</option>
+                <option value="idhm">IDHM</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="periodo"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Período
+              </label>
+
+              <select
+                id="periodo"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 outline-none focus:border-gray-500"
+                defaultValue="todos"
+              >
+                <option value="todos">Todos</option>
+                <option value="2016">2016</option>
+                <option value="2017">2017</option>
+                <option value="2018">2018</option>
+                <option value="2019">2019</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Categorias
+          </h2>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">Economia</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores econômicos e fiscais
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">
+                Desenvolvimento
+              </h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores de desenvolvimento humano
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">Educação</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores educacionais
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">Saúde</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores de saúde
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">Cultura</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores culturais
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-5 shadow">
+              <h3 className="font-semibold text-gray-900">Gestão</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Indicadores de gestão municipal
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Indicadores em destaque
+          </h2>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-sm text-gray-500">IFGF</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">--</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Índice Firjan de Gestão Fiscal
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-sm text-gray-500">IFDM</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">--</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Índice Firjan de Desenvolvimento Municipal
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-sm text-gray-500">IDHM</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">--</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Índice de Desenvolvimento Humano Municipal
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Evolução dos indicadores
+          </h2>
+
+          <div className="flex h-80 items-center justify-center rounded-lg bg-white shadow">
+            <p className="text-gray-500">
+              Gráfico será implementado posteriormente
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Comparativos
+          </h2>
+
+          <div className="flex h-64 items-center justify-center rounded-lg bg-white shadow">
+            <p className="text-gray-500">
+              Comparativos serão implementados posteriormente
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
