@@ -4,11 +4,11 @@
   "packageManager": "pnpm@12.8.1",
   "engines": { "node": ">=20" },
   "scripts": {
+    "build": "pnpm -r build",
     "dev:api": "pnpm --filter api run start:dev",
     "dev:web": "pnpm --filter web run dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "lint": "pnpm -r lint"
   }
 }

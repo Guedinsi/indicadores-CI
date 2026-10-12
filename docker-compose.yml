@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,6 +22,7 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+      DB_PORT: 5432
     ports:
       - "3001:3001"
     depends_on:
