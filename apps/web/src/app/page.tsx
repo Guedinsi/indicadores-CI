@@ -8,6 +8,8 @@ export default function Home() {
 
   const [indicadorSelecionado, setIndicadorSelecionado] = useState("todos");
 
+  const [periodoSelecionado, setPeriodoSelecionado] = useState("todos");
+
   const categorias = [
 
     {
@@ -163,9 +165,22 @@ export default function Home() {
 
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {periodoSelecionado !== "todos" && (
+            <div className="col-span-full rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="font-medium text-amber-900">
+                Dados históricos indisponíveis
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                  Não há dados históricos cadastrados para {periodoSelecionado}.
+                  Selecione outro período ou escolha &quot;Todos&quot; para visualizar os
+                  indicadores disponíveis.
+              </p>
+            </div>
+)}
 
-          {(indicadorSelecionado === "todos" ||
-            indicadorSelecionado === "ifgf") && (
+          {periodoSelecionado === "todos" &&
+            (indicadorSelecionado === "todos" ||
+              indicadorSelecionado === "ifgf") && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div>
@@ -182,8 +197,9 @@ export default function Home() {
             </div>
           )}
 
-          {(indicadorSelecionado === "todos" ||
-            indicadorSelecionado === "ifdm") && (
+          {periodoSelecionado === "todos" &&
+            (indicadorSelecionado === "todos" ||
+              indicadorSelecionado === "ifdm") && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div>
@@ -200,8 +216,9 @@ export default function Home() {
             </div>
           )}
 
-          {(indicadorSelecionado === "todos" ||
-            indicadorSelecionado === "idhm") && (
+          {periodoSelecionado === "todos" &&
+            (indicadorSelecionado === "todos" ||
+              indicadorSelecionado === "idhm") && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div>
@@ -218,7 +235,8 @@ export default function Home() {
             </div>
           )}
 
-          {indicadorSelecionado === "todos" && (
+            {indicadorSelecionado === "todos" &&
+              periodoSelecionado === "todos" && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div>
@@ -382,7 +400,8 @@ export default function Home() {
 
                 className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
 
-                defaultValue="todos"
+                value={periodoSelecionado}
+                onChange={(e) => setPeriodoSelecionado(e.target.value)}
 
               >
 
