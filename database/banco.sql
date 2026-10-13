@@ -2,6 +2,10 @@
 -- Fonte: Base dos Dados / TSE, tabela br_tse_eleicoes.detalhes_votacao_municipio_zona
 --        (consulta filtrada por id_municipio = '4104303'; CSV: indicador01.csv).
 -- Seguro para repetir: apaga e recria só esta tabela, tudo numa transação.
+-- Pra configurar:
+-- sudo docker compose up -d
+-- Pra rodar:
+-- sudo docker compose exec db psql -U indicadores -d indicadores_ci -c "SELECT ano, quantidade_zonas, zonas FROM indicador_zonas_eleitorais ORDER BY ano;"
 
 BEGIN;
 
