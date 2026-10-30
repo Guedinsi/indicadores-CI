@@ -106,7 +106,6 @@ O seed **não cria valores de indicadores**. Enquanto não houver dados importad
 Os dados entram no banco por CSVs versionados em `docs/dados/csv/` e por importadores que validam tudo antes de gravar (transação única, repetir é seguro, modo de teste com `--teste`). O passo a passo completo, com formato dos CSVs, regras e prompts úteis, está em [`docs/GUIA-DADOS.md`](docs/GUIA-DADOS.md).
 
 ```bash
-# eixos, catálogo e valores (sempre rode primeiro com --teste)
 bash docs/dados/importar.sh eixos docs/dados/csv/eixos.csv --teste
 bash docs/dados/importar.sh indicadores docs/dados/csv/indicadores-ipplan.csv --teste
 bash docs/dados/importar.sh valores docs/dados/csv/valores-ipplan.csv --teste
