@@ -7,12 +7,12 @@ import { errorHandler } from 'supertokens-node/framework/express/index.js';
 export class SupertokensExceptionFilter implements ExceptionFilter {
   private readonly handler = errorHandler();
 
-  catch(exception: Error, host: ArgumentsHost) {
+  async catch(exception: Error, host: ArgumentsHost): Promise<void> {
     const http = host.switchToHttp();
     const response = http.getResponse();
     if (response.headersSent) return;
 
-    this.handler(exception, http.getRequest(), response, (err: unknown) => {
+    await this.handler(exception, http.getRequest(), response, (err: unknown) => {
       throw err;
     });
   }
