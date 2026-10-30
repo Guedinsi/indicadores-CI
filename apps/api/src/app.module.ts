@@ -4,12 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { IndicatorsModule } from './modules/indicators/indicators.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // Rodando de apps/api o .env fica dois níveis acima; no Docker as variáveis vêm do ambiente.
       envFilePath: ['.env', '../../.env'],
     }),
     TypeOrmModule.forRootAsync({
@@ -22,10 +22,11 @@ import { IndicatorsModule } from './modules/indicators/indicators.module.js';
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: false, // o esquema só muda por migrations
+        synchronize: false, 
       }),
     }),
     IndicatorsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

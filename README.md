@@ -16,46 +16,7 @@ Os indicadores são organizados por eixo (categoria) e comparados em quatro nív
 | Banco de dados | PostgreSQL via TypeORM |
 | Gerenciador de pacotes | pnpm com workspaces |
 | Containerização | Docker e Docker Compose |
-| Autenticação (planejado) | SuperTokens |
-
-## Estrutura do repositório
-
-Monorepo com pnpm workspaces:
-
-```
-indicadores-CI/
-├── apps/
-│   ├── api/                 # NestJS (API, cálculo e ingestão de dados)
-│   └── web/                 # Next.js (dashboard)
-├── packages/
-│   └── shared/              # tipos e DTOs compartilhados (opcional)
-├── docker/
-│   ├── api.Dockerfile
-│   └── web.Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── .nvmrc
-├── package.json
-├── pnpm-workspace.yaml
-└── tsconfig.base.json
-```
-
-Organização atual da API:
-
-```
-apps/api/src/
-├── modules/
-│   ├── indicators/          # entidades, serviço e endpoints de leitura
-│   │   └── entities/        # axis, indicator, indicator-value, territory
-│   └── ingestion/           # fontes e execuções de ingestão
-│       └── entities/        # data-source, ingestion-run
-├── database/
-│   ├── data-source.ts       # configuração usada pela CLI do TypeORM
-│   ├── migrations/          # histórico do esquema do banco
-│   └── seed-dev.sql         # dados iniciais de desenvolvimento
-├── app.module.ts
-└── main.ts
-```
+| Autenticação | SuperTokens (e-mail e senha, sessão por cookie) |
 
 Os conectores das bases públicas e os cálculos entram em `modules/ingestion/` e em um módulo de cálculo, nas próximas etapas.
 
@@ -100,8 +61,13 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 | `DB_HOST`, `DB_PORT` | Endereço do PostgreSQL. Use `localhost` ao rodar a API fora do Docker. |
 | `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Credenciais e nome do banco. |
 | `API_PORT` | Porta da API (padrão `3001`). |
-| `WEB_URL` | URL do front, usada no CORS da API. |
+| `WEB_URL` | URL do front, usada no CORS da API e pelo SuperTokens. |
+| `API_PUBLIC_URL` | URL pública da API, usada pelo SuperTokens para os cookies de sessão. |
+| `SUPERTOKENS_PORT` | Porta do core do SuperTokens publicada na máquina (padrão `3567`). |
+| `SUPERTOKENS_CONNECTION_URI` | Endereço do core. `http://localhost:3567` fora do Docker; no Docker o compose usa `http://supertokens:3567`. |
+| `SUPERTOKENS_API_KEY` | Chave do core. Vazia em desenvolvimento; defina em produção. |
 | `NEXT_PUBLIC_API_URL` | URL da API acessada pelo navegador. É embutida no build do Next. |
+| `NEXT_PUBLIC_WEB_URL` | URL do site, usada pelo SuperTokens no navegador. Também embutida no build. |
 | `API_URL_INTERNAL` | URL da API acessada pelo servidor do Next dentro do Docker (`http://api:3001`). |
 | `CITY_IBGE_CODE` | (Opcional) Código IBGE do município exibido no dashboard. Padrão `4104303` (Campo Mourão). |
 
@@ -110,8 +76,8 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 Fluxo recomendado para o dia a dia, com hot reload: apps rodando na máquina e apenas o banco no Docker.
 
 ```bash
-docker compose up -d db    # sobe somente o PostgreSQL
-pnpm --filter api migration:run   # cria as tabelas (primeira vez e a cada nova migration)
+docker compose up -d db supertokens   # sobe o PostgreSQL e o core do SuperTokens
+pnpm --filter api migration:run       # cria as tabelas (primeira vez e a cada nova migration)
 pnpm dev:api               # API em http://localhost:3001
 pnpm dev:web               # Web em http://localhost:3000
 ```
@@ -129,10 +95,47 @@ Rode cada app em um terminal separado.
 Na primeira vez, depois de aplicar as migrations, carregue o catálogo mínimo (eixos, territórios e os indicadores IFGF, IFDM e IDHM). O script pode ser executado mais de uma vez sem duplicar nada:
 
 ```bash
-docker compose exec -T db psql -U <DB_USER> -d <DB_NAME> < apps/api/src/database/seed-dev.sql
+set -a; source .env; set +a
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < apps/api/src/database/seed-dev.sql
 ```
 
-O seed **não cria valores de indicadores**. Enquanto não houver ingestão, o dashboard mostra `--` nos cards. Os valores devem vir das fontes reais.
+O seed **não cria valores de indicadores**. Enquanto não houver dados importados, o dashboard mostra `--` nos cards. Os valores devem vir das fontes reais.
+
+## Carga de dados
+
+Os dados entram no banco por CSVs versionados em `docs/dados/csv/` e por importadores que validam tudo antes de gravar (transação única, repetir é seguro, modo de teste com `--teste`). O passo a passo completo, com formato dos CSVs, regras e prompts úteis, está em [`docs/GUIA-DADOS.md`](docs/GUIA-DADOS.md).
+
+```bash
+bash docs/dados/importar.sh eixos docs/dados/csv/eixos.csv --teste
+bash docs/dados/importar.sh indicadores docs/dados/csv/indicadores-ipplan.csv --teste
+bash docs/dados/importar.sh valores docs/dados/csv/valores-ipplan.csv --teste
+
+# baixa população, PIB, VAB, rebanhos e safras do IBGE (API pública) para um CSV
+python3 docs/dados/scripts/baixar_ibge.py
+
+# prepara o banco do zero e importa todos os CSVs de uma vez
+bash docs/dados/setup-dados.sh
+```
+
+As fontes de cada indicador, conforme o documento do IPPLAN, estão em [`docs/dados/fontes.md`](docs/dados/fontes.md).
+
+## Autenticação (SuperTokens)
+
+Login e cadastro por e-mail e senha, com sessão por cookie. O core do SuperTokens roda em um container e guarda usuários e sessões em um banco `supertokens` no mesmo PostgreSQL.
+
+- **API:** as rotas `/api/auth/*` (login, cadastro, logout, refresh) são tratadas pelo SuperTokens. O `AuthGuard` protege rotas, e `GET /api/me` devolve os dados do usuário logado.
+- **Web:** `/auth` mostra login e cadastro, e `/usuario` é a página do usuário (exige login). O botão "Entrar / Minha conta" fica no cabeçalho do dashboard.
+- O dashboard e os endpoints de indicadores continuam públicos.
+
+Para testar: suba o banco e o core (`docker compose up -d db supertokens`), rode a API e o site, abra http://localhost:3000, clique em **Entrar** e crie uma conta. Se o core não subir por falta do banco, crie-o uma vez:
+
+```bash
+set -a; source .env; set +a
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE DATABASE supertokens;"
+docker compose restart supertokens
+```
+
+Em produção: defina `SUPERTOKENS_API_KEY`, use HTTPS e fixe a versão da imagem do core.
 
 ## Migrations (TypeORM)
 
@@ -170,8 +173,10 @@ Todas as rotas têm o prefixo `/api`.
 | `GET /api/indicators/latest?axis=&period=` | Indicadores com o valor do município (mais recente ou do período pedido) |
 | `GET /api/indicators/:code/values?territory=` | Série temporal de um indicador |
 | `GET /api/indicators/:code/comparison?period=` | Município × região × estado × país no mesmo período |
+| `GET /api/me` | Dados do usuário logado (ID, e-mail, data de criação). Exige login: sem sessão retorna `401`. |
+| `/api/auth/*` | Login, cadastro, logout e refresh de sessão (SuperTokens) |
 
-Indicador inexistente retorna `404`. Os filtros `axis`, `period` e `territory` são opcionais.
+Indicador inexistente retorna `404`. Os filtros `axis`, `period` e `territory` são opcionais. As rotas de indicadores são públicas.
 
 ## Build e execução de produção (sem Docker)
 
@@ -184,7 +189,7 @@ pnpm --filter web start          # next start
 ## Executando tudo com Docker
 
 ```bash
-docker compose up --build        # builda e sobe db, api e web
+docker compose up --build        # builda e sobe db, supertokens, api e web
 docker compose up -d --build     # mesmo, em segundo plano
 docker compose logs -f api       # acompanha os logs de um serviço
 docker compose ps                # status dos containers
@@ -219,6 +224,9 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 | Web        | http://localhost:3000 |
 | API        | http://localhost:3001 |
 | PostgreSQL | localhost:5432        |
+| SuperTokens (core) | http://localhost:3567 |
+| Login e cadastro | http://localhost:3000/auth |
+| Página do usuário | http://localhost:3000/usuario |
 
 ## Fluxo de contribuição
 
@@ -230,11 +238,15 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 ## Roadmap
 
 - [x] Estrutura inicial do monorepo (Next.js + NestJS + PostgreSQL)
-- [ ] Modelo de dados dos indicadores (entidades e migration inicial)
-- [ ] API de leitura dos indicadores
-- [ ] Dashboard consumindo a API (cards, filtros, evolução e comparativo)
-- [ ] Seed do catálogo completo de indicadores (a partir da planilha do IPPLAN)
-- [ ] Conectores e ingestão das bases governamentais
+- [x] Modelo de dados dos indicadores (entidades e migration inicial)
+- [x] API de leitura dos indicadores
+- [x] Dashboard consumindo a API (cards, filtros, evolução e comparativo)
+- [x] Importadores CSV e guia de carga de dados
+- [x] Catálogo de indicadores do IPPLAN (CSV) e registro de fontes
+- [x] Autenticação com SuperTokens (login, cadastro e página do usuário)
+- [ ] Carga dos valores reais de todos os indicadores
+- [ ] Conectores e ingestão automática das bases governamentais
 - [ ] Cálculo dos indicadores
-- [ ] Autenticação com SuperTokens
+- [ ] Papéis e permissões, confirmação de e-mail e recuperação de senha
+- [ ] Tradução do formulário de login para pt-BR
 - [ ] Pipeline de CI (lint e build em cada PR)
