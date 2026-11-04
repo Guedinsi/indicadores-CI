@@ -11,6 +11,7 @@ import {
   type SeriesPoint,
   type SeriesResponse,
 } from "@/lib/api";
+import { AuthLink } from "@/components/auth-link";
 
 /** Resultado de uma requisição junto com a chave dos filtros usados nela. */
 type Loaded<T> = { key: string; data: T } | null;
@@ -313,11 +314,14 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Município
-                </p>
-                <p className="mt-1 text-lg font-semibold">Campo Mourão - PR</p>
+              <div className="flex flex-col items-start gap-3 md:items-end">
+                <AuthLink />
+                <div className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Município
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">Campo Mourão - PR</p>
+                </div>
               </div>
             </div>
           </div>

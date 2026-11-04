@@ -5,7 +5,9 @@ WORKDIR /repo
 FROM base AS build
 
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WEB_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WEB_URL=$NEXT_PUBLIC_WEB_URL
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/
