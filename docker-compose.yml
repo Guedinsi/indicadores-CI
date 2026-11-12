@@ -15,7 +15,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # Core do SuperTokens (guarda usuários e sessões no banco "supertokens" do mesmo Postgres)
   supertokens:
     image: registry.supertokens.io/supertokens/supertokens-postgresql:latest
     depends_on:
@@ -33,6 +32,13 @@ services:
       retries: 10
     restart: unless-stopped
 
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:${MAIL_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${SMTP_PORT:-1025}:1025"
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -42,6 +48,8 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       SUPERTOKENS_CONNECTION_URI: http://supertokens:3567
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     ports:
       - "3001:3001"
     depends_on:
@@ -49,6 +57,8 @@ services:
         condition: service_healthy
       supertokens:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   web:
     build:

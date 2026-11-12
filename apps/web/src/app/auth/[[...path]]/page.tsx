@@ -4,19 +4,20 @@ import Link from "next/link";
 import { useEffect, useSyncExternalStore } from "react";
 import SuperTokens from "supertokens-auth-react";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
+import { EmailVerificationPreBuiltUI } from "supertokens-auth-react/recipe/emailverification/prebuiltui";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 
 const semAssinatura = () => () => {};
 
-// Telas de login e cadastro (/auth) feitas pelo SuperTokens
+const TELAS = [EmailPasswordPreBuiltUI, EmailVerificationPreBuiltUI];
+
 export default function AuthPage() {
-  // true só no navegador (o SuperTokens precisa do window)
   const noNavegador = useSyncExternalStore(
     semAssinatura,
     () => true,
     () => false,
   );
-  const valida = noNavegador && canHandleRoute([EmailPasswordPreBuiltUI]);
+  const valida = noNavegador && canHandleRoute(TELAS);
 
   useEffect(() => {
     if (noNavegador && !valida) {
@@ -35,7 +36,7 @@ export default function AuthPage() {
         >
           ← Voltar ao painel de indicadores
         </Link>
-        {getRoutingComponent([EmailPasswordPreBuiltUI])}
+        {getRoutingComponent(TELAS)}
       </div>
     </main>
   );
