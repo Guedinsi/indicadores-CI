@@ -76,8 +76,8 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 Fluxo recomendado para o dia a dia, com hot reload: apps rodando na máquina e apenas o banco no Docker.
 
 ```bash
-docker compose up -d db supertokens   # sobe o PostgreSQL e o core do SuperTokens
-pnpm --filter api migration:run       # cria as tabelas (primeira vez e a cada nova migration)
+docker compose up -d db supertokens mailpit  
+pnpm --filter api migration:run      
 pnpm dev:api               # API em http://localhost:3001
 pnpm dev:web               # Web em http://localhost:3000
 ```
