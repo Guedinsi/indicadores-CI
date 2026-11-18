@@ -92,7 +92,7 @@ Rode cada app em um terminal separado.
 
 ### Dados iniciais (seed de desenvolvimento)
 
-Na primeira vez, depois de aplicar as migrations, carregue o catálogo mínimo (eixos, territórios e os indicadores IFGF, IFDM e IDHM). O script pode ser executado mais de uma vez sem duplicar nada:
+Na primeira vez, depois de aplicar as migrations, carregue os eixos e os territórios. O seed não cria indicadores nem valores: o catálogo e os dados reais vêm dos scripts de `docs/dados` (veja `docs/dados/fontes.md`; `bash docs/dados/setup-dados.sh` faz tudo de uma vez). O script pode ser executado mais de uma vez sem duplicar nada:
 
 ```bash
 set -a; source .env; set +a

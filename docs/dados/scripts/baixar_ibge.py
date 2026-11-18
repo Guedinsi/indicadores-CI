@@ -5,7 +5,7 @@ e gera docs/dados/csv/valores-ibge.csv no formato do importador de valores.
 Uso (na raiz do repositório, com internet):
     python3 docs/dados/scripts/baixar_ibge.py                 # tudo, de 2015 em diante
     python3 docs/dados/scripts/baixar_ibge.py --desde 2010
-    python3 docs/dados/scripts/baixar_ibge.py --so AGR-005,GP-005
+    python3 docs/dados/scripts/baixar_ibge.py --so AGR-005,GP-033
     python3 docs/dados/scripts/baixar_ibge.py --listar 5938   # mostra variáveis/categorias de uma tabela
 
 Territórios: Campo Mourão (MUNICIPIO/4104303), Paraná (ESTADO/41), Brasil (PAIS/BR) e
@@ -40,20 +40,27 @@ COMCAM = [
 # code: (tabela, tokens do nome da variável, tokens a excluir, categoria (ou None), soma na COMCAM?)
 ESPEC = {
     "DEM-001": (6579, ["populacao residente estimada"], [], None, True),
-    "GP-005": (5938, ["produto interno bruto per capita"], [], None, False),  # COMCAM: PIB/população
-    "GP-006": (5938, ["valor adicionado bruto", "total"], [], None, True),
-    "GP-018": (5938, ["valor adicionado bruto", "agropecuaria"], [], None, True),
-    "GP-019": (5938, ["valor adicionado bruto", "industria"], [], None, True),
-    "GP-020": (5938, ["valor adicionado bruto", "servicos", "exclusive"], [], None, True),
-    "GP-021": (5938, ["valor adicionado bruto", "administracao"], ["exclusive"], None, True),
+    "DEM-002": (4714, ["populacao residente"], [], None, True),          # Censo 2022
+    "DEM-003": (4714, ["densidade demografica"], [], None, False),       # não se soma densidade
+    "DEM-004": (4714, ["area da unidade territorial"], [], None, True),
+    # PIB per capita (GP-005) não existe na tabela 5938: vem do baixar_ibge_cidades.py
+    "GP-033": (5938, ["produto interno bruto", "correntes"], ["participacao"], None, True),
+    "GP-006": (5938, ["valor adicionado bruto", "total"], ["participacao"], None, True),
+    "GP-018": (5938, ["valor adicionado bruto", "agropecuaria"], ["participacao"], None, True),
+    "GP-019": (5938, ["valor adicionado bruto", "industria"], ["participacao"], None, True),
+    "GP-020": (5938, ["valor adicionado bruto", "servicos", "exclusive"], ["participacao"], None, True),
+    "GP-021": (5938, ["valor adicionado bruto", "administracao"], ["participacao", "exclusive"], None, True),
     "AGR-002": (3939, ["efetivo dos rebanhos"], [], "bovino", True),
     "AGR-003": (3939, ["efetivo dos rebanhos"], [], "suino - total", True),
     "AGR-004": (3939, ["efetivo dos rebanhos"], [], "galinaceos - total", True),
+    "AGR-010": (3939, ["efetivo dos rebanhos"], [], "equino", True),
+    "AGR-011": (3939, ["efetivo dos rebanhos"], [], "ovino", True),
     "AGR-005": (5457, ["quantidade produzida"], [], "soja (em grao)", True),
     "AGR-006": (5457, ["quantidade produzida"], [], "milho (em grao)", True),
     "AGR-007": (5457, ["quantidade produzida"], [], "trigo (em grao)", True),
+    "AGR-012": (5457, ["quantidade produzida"], [], "batata-inglesa", True),
+    "AGR-013": (5457, ["quantidade produzida"], [], "aveia (em grao)", True),
 }
-PIB_TOTAL = (5938, ["produto interno bruto", "correntes"], ["per capita"], None, True)
 
 
 def norm(s):
@@ -150,7 +157,6 @@ def soma_regiao(series, codigos, anos):
 def coletar(ibge, codigos, desde, quais):
     locais = f"N6[{','.join(codigos)}]|N3[{UF_PR}]|N1[all]"
     linhas, relatorio = [], []
-    cache_pop = cache_pib = None
     for code in quais:
         agg, tokens, excl, cat, somar = ESPEC[code]
         try:
@@ -160,12 +166,6 @@ def coletar(ibge, codigos, desde, quais):
             s = ibge.serie(agg, var, periodos, locais, classif)
             anos = sorted({a for d in s.values() for a in d})
             regional = soma_regiao(s, codigos, anos) if somar else None
-            if code == "GP-005":  # PIB per capita da região = PIB total / população
-                pib = ibge.serie(*PIB_TOTAL[:1], ibge.variavel(*PIB_TOTAL[:3]), periodos, locais)
-                pa, pv, pexc, _, _ = ESPEC["DEM-001"]
-                pop = ibge.serie(pa, ibge.variavel(pa, pv, pexc), periodos, locais)
-                sp, sq = soma_regiao(pib, codigos, anos), soma_regiao(pop, codigos, anos)
-                regional = {a: (sp[a] * 1000 / sq[a] if sp[a] is not None and sq[a] else None) for a in anos}
             destinos = [("MUNICIPIO", MUNICIPIO, s.get(("N6", MUNICIPIO), {})),
                         ("ESTADO", UF_PR, s.get(("N3", UF_PR), {})),
                         ("PAIS", "BR", s.get(("N1", "1"), {}))]

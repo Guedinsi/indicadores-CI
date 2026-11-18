@@ -8,6 +8,8 @@ import {
   type ComparisonItem,
   type ComparisonResponse,
   type IndicatorCard,
+  type IndicatorKind,
+  type IndicatorPolarity,
   type SeriesPoint,
   type SeriesResponse,
 } from "@/lib/api";
@@ -19,6 +21,25 @@ type Loaded<T> = { key: string; data: T } | null;
 function formatarValor(valor: number | null): string {
   if (valor === null) return "--";
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+}
+
+const LIMITE_CARDS = 12;
+
+function leitura(polaridade: IndicatorPolarity): string | null {
+  if (polaridade === "LOWER_BETTER") return "menor é melhor";
+  if (polaridade === "HIGHER_BETTER") return "maior é melhor";
+  return null;
+}
+
+function formatarParticipacao(parte: number, todo: number): string {
+  const pct = (parte / todo) * 100;
+  if (pct < 0.01) return "menos de 0,01%";
+  return `${pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+}
+
+function periodoEmAnos(periodo: string): number {
+  const [ano, mes] = periodo.split("-").map(Number);
+  return ano + (mes ? (mes - 1) / 12 : 0);
 }
 
 function mensagemDeErro(e: unknown): string {
@@ -76,19 +97,29 @@ function GraficoEvolucao({
   const minimo = Math.min(...valores);
   const maximo = Math.max(...valores);
   const folga = maximo === minimo ? Math.abs(maximo) * 0.1 || 1 : (maximo - minimo) * 0.15;
-  const yMin = minimo - folga;
+  const yMin = minimo >= 0 ? Math.max(minimo - folga, 0) : minimo - folga;
   const yMax = maximo + folga;
 
+  const tempos = validos.map((p) => periodoEmAnos(p.period));
+  const tMin = Math.min(...tempos);
+  const tMax = Math.max(...tempos);
   const x = (i: number) =>
-    validos.length === 1
+    tMax === tMin
       ? pad.left + larguraUtil / 2
-      : pad.left + (i / (validos.length - 1)) * larguraUtil;
+      : pad.left + ((tempos[i] - tMin) / (tMax - tMin)) * larguraUtil;
   const y = (v: number) =>
     pad.top + (1 - (v - yMin) / (yMax - yMin)) * alturaUtil;
 
   const linha = validos.map((p, i) => `${x(i)},${y(p.value)}`).join(" ");
   const marcasY = [yMax, (yMax + yMin) / 2, yMin];
-  const passoRotulo = Math.ceil(validos.length / 8);
+  const comRotulo = new Set<number>();
+  let ultimoRotulo = -Infinity;
+  validos.forEach((_, i) => {
+    if (x(i) - ultimoRotulo >= 48) {
+      comRotulo.add(i);
+      ultimoRotulo = x(i);
+    }
+  });
 
   return (
     <svg
@@ -133,7 +164,7 @@ function GraficoEvolucao({
           <circle cx={x(i)} cy={y(p.value)} r="4.5" fill="#0f172a">
             <title>{`${p.period}: ${formatarValor(p.value)}${unidade ? ` ${unidade}` : ""}`}</title>
           </circle>
-          {i % passoRotulo === 0 && (
+          {comRotulo.has(i) && (
             <text
               x={x(i)}
               y={H - 12}
@@ -150,12 +181,70 @@ function GraficoEvolucao({
   );
 }
 
-function BarrasComparativo({
+function ParticipacaoComparativo({
   itens,
   unidade,
+  mostrarParticipacao,
 }: {
   itens: ComparisonItem[];
   unidade: string | null;
+  mostrarParticipacao: boolean;
+}) {
+  const municipio = itens.find((i) => i.type === "MUNICIPIO")?.value ?? null;
+
+  return (
+    <ul className="w-full divide-y divide-slate-100">
+      {itens.map((item) => {
+        const destaque = item.type === "MUNICIPIO";
+        const participacao =
+          mostrarParticipacao &&
+          !destaque &&
+          municipio !== null &&
+          municipio > 0 &&
+          item.value !== null &&
+          item.value > 0
+            ? formatarParticipacao(municipio, item.value)
+            : null;
+
+        return (
+          <li
+            key={item.territory}
+            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3"
+          >
+            <span
+              className={`text-sm ${
+                destaque ? "font-semibold text-slate-900" : "text-slate-600"
+              }`}
+            >
+              {item.territory}
+            </span>
+            <span className="text-right">
+              <span className="text-sm font-medium text-slate-700">
+                {item.value === null
+                  ? "sem dados"
+                  : `${formatarValor(item.value)}${unidade ? ` ${unidade}` : ""}`}
+              </span>
+              {participacao && (
+                <span className="block text-xs text-slate-500">
+                  Campo Mourão representa {participacao}
+                </span>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Comparativo({
+  itens,
+  unidade,
+  tipo,
+}: {
+  itens: ComparisonItem[];
+  unidade: string | null;
+  tipo: IndicatorKind;
 }) {
   if (itens.length === 0) {
     return (
@@ -167,14 +256,24 @@ function BarrasComparativo({
     );
   }
 
-  const maximo = Math.max(...itens.map((i) => i.value ?? 0), 0);
+  if (tipo !== "RATE") {
+    return (
+      <ParticipacaoComparativo
+        itens={itens}
+        unidade={unidade}
+        mostrarParticipacao={tipo === "TOTAL"}
+      />
+    );
+  }
+
+  const maximo = Math.max(...itens.map((i) => Math.abs(i.value ?? 0)), 0);
 
   return (
     <ul className="w-full space-y-4">
       {itens.map((item) => {
         const largura =
           item.value !== null && maximo > 0
-            ? Math.max((item.value / maximo) * 100, 0)
+            ? (Math.abs(item.value) / maximo) * 100
             : 0;
         const destaque = item.type === "MUNICIPIO";
 
@@ -211,6 +310,7 @@ export default function Home() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todas");
   const [indicadorSelecionado, setIndicadorSelecionado] = useState("todos");
   const [periodoSelecionado, setPeriodoSelecionado] = useState("todos");
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   const [categorias, setCategorias] = useState<Axis[]>([]);
   const [periodos, setPeriodos] = useState<string[]>([]);
@@ -223,7 +323,6 @@ export default function Home() {
   const chaveIndicadores = `${categoriaSelecionada}|${periodoSelecionado}`;
   const chaveDetalhe = `${indicadorSelecionado}|${periodoSelecionado}`;
 
-  // Categorias e períodos disponíveis (uma vez)
   useEffect(() => {
     let cancelado = false;
     Promise.all([api.axes(), api.periods()])
@@ -241,7 +340,6 @@ export default function Home() {
     };
   }, []);
 
-  // Cards de indicadores (mudam com categoria e período)
   useEffect(() => {
     let cancelado = false;
     api
@@ -262,7 +360,6 @@ export default function Home() {
     };
   }, [categoriaSelecionada, periodoSelecionado, chaveIndicadores]);
 
-  // Gráfico de evolução e comparativo (só quando há um indicador selecionado)
   useEffect(() => {
     if (indicadorSelecionado === "todos") return;
     let cancelado = false;
@@ -288,9 +385,21 @@ export default function Home() {
 
   const listaIndicadores = indicadores?.data ?? [];
   const atualizandoIndicadores = indicadores?.key !== chaveIndicadores;
-  const indicadoresVisiveis = listaIndicadores.filter(
-    (i) => indicadorSelecionado === "todos" || i.code === indicadorSelecionado,
-  );
+  const semCategoria =
+    categoriaSelecionada === "todas" && indicadorSelecionado === "todos";
+  const comDado = listaIndicadores.filter((i) => i.value !== null);
+  const candidatos = semCategoria
+    ? []
+    : indicadorSelecionado === "todos"
+      ? [...comDado, ...listaIndicadores.filter((i) => i.value === null)]
+      : listaIndicadores.filter((i) => i.code === indicadorSelecionado);
+  const indicadoresVisiveis = mostrarTodos
+    ? candidatos
+    : candidatos.slice(0, LIMITE_CARDS);
+  const ocultos = candidatos.length - indicadoresVisiveis.length;
+  const leituraDetalhe = detalhe?.key === chaveDetalhe
+    ? leitura(detalhe.data.serie.indicator.polarity)
+    : null;
 
   const detalheAtual = detalhe?.key === chaveDetalhe ? detalhe.data : null;
 
@@ -341,7 +450,9 @@ export default function Home() {
           <div className="mb-4">
             <h2 className="text-xl font-bold text-slate-900">Visão geral</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Principais índices disponíveis no painel
+              {semCategoria
+                ? "Escolha uma categoria ou um indicador para ver os valores"
+                : "Indicadores de Campo Mourão na seleção atual"}
               {atualizandoIndicadores && !erro ? " · atualizando..." : ""}
             </p>
           </div>
@@ -360,11 +471,14 @@ export default function Home() {
                     <p className="mt-3 text-3xl font-bold text-slate-900">
                       {formatarValor(indicador.value)}
                     </p>
-                    {indicador.value !== null && indicador.unit && (
-                      <p className="mt-1 text-xs text-slate-400">
-                        {indicador.unit}
-                      </p>
-                    )}
+                    {indicador.value !== null &&
+                      (indicador.unit || leitura(indicador.polarity)) && (
+                        <p className="mt-1 text-xs text-slate-400">
+                          {[indicador.unit, leitura(indicador.polarity)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
                     {indicador.axisAbbreviation ?? indicador.code.slice(0, 2)}
@@ -374,9 +488,11 @@ export default function Home() {
                   {indicador.description ?? indicador.name}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {indicador.period
+                  {indicador.value !== null
                     ? `Referência: ${indicador.period}`
-                    : "Sem dados"}
+                    : indicador.period
+                      ? `Sem dados em ${indicador.period}`
+                      : "Sem dados"}
                 </p>
               </div>
             ))}
@@ -397,11 +513,24 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
-                  Indicadores cadastrados na seleção atual
+                  Indicadores cadastrados na seleção atual ({comDado.length}{" "}
+                  com dado)
                 </p>
               </div>
             )}
           </div>
+
+          {(ocultos > 0 || (mostrarTodos && candidatos.length > LIMITE_CARDS)) && (
+            <button
+              type="button"
+              onClick={() => setMostrarTodos(!mostrarTodos)}
+              className="mt-4 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              {mostrarTodos
+                ? "Mostrar menos"
+                : `Mostrar os outros ${ocultos} indicadores`}
+            </button>
+          )}
 
           {indicadores && listaIndicadores.length === 0 && (
             <p className="mt-4 text-sm text-slate-500">
@@ -434,6 +563,7 @@ export default function Home() {
                 onChange={(e) => {
                   setCategoriaSelecionada(e.target.value);
                   setIndicadorSelecionado("todos");
+                  setMostrarTodos(false);
                 }}
               >
                 <option value="todas">Todas</option>
@@ -516,6 +646,7 @@ export default function Home() {
                   onClick={() => {
                     setCategoriaSelecionada(categoria.slug);
                     setIndicadorSelecionado("todos");
+                    setMostrarTodos(false);
                   }}
                   className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
@@ -560,7 +691,8 @@ export default function Home() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Acompanhe a evolução dos indicadores ao longo dos períodos.
+              Acompanhe a evolução dos indicadores ao longo dos períodos
+              {leituraDetalhe ? ` · ${leituraDetalhe}` : ""}.
             </p>
           </div>
 
@@ -587,7 +719,10 @@ export default function Home() {
             <h2 className="text-xl font-bold text-slate-900">Comparativos</h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Compare Campo Mourão com a região, o estado e o país
+              {detalheAtual?.comparativo.indicator.kind === "TOTAL"
+                ? "Participação de Campo Mourão na região, no estado e no país"
+                : "Compare Campo Mourão com a região, o estado e o país"}
+              {leituraDetalhe ? ` · ${leituraDetalhe}` : ""}
               {detalheAtual?.comparativo.period
                 ? ` · período ${detalheAtual.comparativo.period}`
                 : ""}
@@ -605,9 +740,10 @@ export default function Home() {
             ) : !detalheAtual ? (
               <p className="text-sm text-slate-400">Carregando...</p>
             ) : (
-              <BarrasComparativo
+              <Comparativo
                 itens={detalheAtual.comparativo.values}
                 unidade={detalheAtual.comparativo.indicator.unit}
+                tipo={detalheAtual.comparativo.indicator.kind}
               />
             )}
           </div>

@@ -40,3 +40,8 @@ Thumbs.db
 data/raw/
 *.csv
 *.xlsx
+
+# Scripts de dados (docs/dados/scripts): cache de downloads e bytecode do Python
+docs/dados/scripts/.cache/
+__pycache__/
+docs/dados/brutos/

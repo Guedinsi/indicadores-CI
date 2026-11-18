@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Axis } from './entities/axis.entity.js';
 import { IndicatorValue } from './entities/indicator-value.entity.js';
-import { Indicator } from './entities/indicator.entity.js';
+import {
+  Indicator,
+  type IndicatorKind,
+  type IndicatorPolarity,
+} from './entities/indicator.entity.js';
 import { Territory, TerritoryType } from './entities/territory.entity.js';
 
 export interface AxisResponse {
@@ -21,6 +25,8 @@ export interface IndicatorCardResponse {
   name: string;
   description: string | null;
   unit: string | null;
+  kind: IndicatorKind | null;
+  polarity: IndicatorPolarity | null;
   axisSlug: string;
   axisAbbreviation: string | null;
   /** Período do valor retornado (ou o período pedido, quando não há valor). */
@@ -29,14 +35,26 @@ export interface IndicatorCardResponse {
   value: number | null;
 }
 
+export interface IndicatorSummary {
+  code: string;
+  name: string;
+  unit: string | null;
+  kind: IndicatorKind | null;
+  polarity: IndicatorPolarity | null;
+}
+
+function summary(i: Indicator): IndicatorSummary {
+  return { code: i.code, name: i.name, unit: i.unit, kind: i.kind, polarity: i.polarity };
+}
+
 export interface SeriesResponse {
-  indicator: { code: string; name: string; unit: string | null };
+  indicator: IndicatorSummary;
   territory: { code: string; name: string; type: TerritoryType };
   points: { period: string; value: number | null }[];
 }
 
 export interface ComparisonResponse {
-  indicator: { code: string; name: string; unit: string | null };
+  indicator: IndicatorSummary;
   period: string | null;
   values: { territory: string; type: TerritoryType; value: number | null }[];
 }
@@ -91,6 +109,7 @@ export class IndicatorsService {
       .createQueryBuilder('v')
       .select('v.period', 'period')
       .distinct(true)
+      .where('v.value IS NOT NULL')
       .orderBy('v.period', 'DESC')
       .getRawMany<{ period: string }>();
     return rows.map((r) => r.period);
@@ -134,6 +153,8 @@ export class IndicatorsService {
         name: i.name,
         description: i.description,
         unit: i.unit,
+        kind: i.kind,
+        polarity: i.polarity,
         axisSlug: i.axis.slug,
         axisAbbreviation: i.axis.abbreviation,
         period: v?.period ?? period ?? null,
@@ -163,7 +184,7 @@ export class IndicatorsService {
     });
 
     return {
-      indicator: { code: indicator.code, name: indicator.name, unit: indicator.unit },
+      indicator: summary(indicator),
       territory: { code: territory.code, name: territory.name, type: territory.type },
       points: rows.map((r) => ({ period: r.period, value: r.value })),
     };
@@ -171,7 +192,8 @@ export class IndicatorsService {
 
   /**
    * Município x região x estado x país no MESMO período.
-   * Sem `period`, usa o período mais recente que tenha algum valor para o indicador.
+   * Sem `period`, usa o período mais recente em que o MUNICÍPIO tem valor (o mesmo do card);
+   * se o município não tiver nenhum, o mais recente com valor em qualquer território.
    */
   async comparison(code: string, period?: string): Promise<ComparisonResponse> {
     const indicator = await this.requireIndicator(code);
@@ -179,7 +201,7 @@ export class IndicatorsService {
     const target = period ?? (await this.latestPeriod(indicator.id));
     if (!target) {
       return {
-        indicator: { code: indicator.code, name: indicator.name, unit: indicator.unit },
+        indicator: summary(indicator),
         period: null,
         values: [],
       };
@@ -195,7 +217,7 @@ export class IndicatorsService {
     );
 
     return {
-      indicator: { code: indicator.code, name: indicator.name, unit: indicator.unit },
+      indicator: summary(indicator),
       period: target,
       values: rows.map((r) => ({
         territory: r.territory.name,
@@ -206,10 +228,16 @@ export class IndicatorsService {
   }
 
   private async latestPeriod(indicatorId: number): Promise<string | undefined> {
-    const row = await this.values.findOne({
-      where: { indicatorId },
-      order: { period: 'DESC' },
-    });
+    const comValor = { indicatorId, value: Not(IsNull()) };
+    const row =
+      (await this.values.findOne({
+        where: {
+          ...comValor,
+          territory: { type: TerritoryType.MUNICIPALITY, code: this.cityCode },
+        },
+        order: { period: 'DESC' },
+      })) ??
+      (await this.values.findOne({ where: comValor, order: { period: 'DESC' } }));
     return row?.period;
   }
 

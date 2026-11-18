@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
     });
 
     if (response.headersSent) return false;
-    if (error) throw error; // vira 401 pelo SupertokensExceptionFilter
+    if (error) throw error; 
     return true;
   }
 }

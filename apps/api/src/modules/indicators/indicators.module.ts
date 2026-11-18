@@ -11,8 +11,6 @@ import { IndicatorsService } from './indicators.service.js';
 
 @Module({
   imports: [
-    // Todas as entidades precisam estar registradas (autoLoadEntities), inclusive as
-    // que só aparecem em relacionamentos (DataSourceEntity, IngestionRun).
     TypeOrmModule.forFeature([
       Axis,
       Indicator,

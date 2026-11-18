@@ -15,7 +15,6 @@ function Perfil() {
   const router = useRouter();
 
   useEffect(() => {
-    // Chama a API Nest; o SuperTokens anexa a sessão (cookie) automaticamente
     fetch(`${API_URL}/api/me`, { credentials: "include" })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -85,7 +84,6 @@ function Perfil() {
   );
 }
 
-// requireAuth: sem sessão, redireciona para /auth
 export default function UsuarioPage() {
   return (
     <SessionAuth requireAuth>
