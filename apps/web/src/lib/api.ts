@@ -76,8 +76,11 @@ export const api = {
   periods: () => get<string[]>("/periods"),
   indicators: (axis?: string, period?: string) =>
     get<IndicatorCard[]>("/indicators/latest", { axis, period }),
-  series: (code: string) =>
-    get<SeriesResponse>(`/indicators/${encodeURIComponent(code)}/values`),
+  /** Série de um território; sem `territory`, a do município. */
+  series: (code: string, territory?: string) =>
+    get<SeriesResponse>(`/indicators/${encodeURIComponent(code)}/values`, {
+      territory,
+    }),
   comparison: (code: string, period?: string) =>
     get<ComparisonResponse>(
       `/indicators/${encodeURIComponent(code)}/comparison`,

@@ -112,20 +112,44 @@ Por que os valores do PDF divergiam:
 
 Ao digitar novos valores do PDF, não repita períodos que já vêm de um script: o digitado voltaria a sobrescrever.
 
-## O que continua manual (e por quê)
+## Valores copiados do PDF (sem fonte automática)
 
-| Código / item do PDF | Motivo | Onde buscar |
+`indicadores-pdf-manual.csv` (catálogo) e `valores-pdf-manual.csv` (valores) guardam o que está no documento do IPPLAN
+e não foi encontrado em base pública que dê para baixar por script. São importados pelo `setup-dados.sh` como os
+outros. A fonte no banco é "Documento Indicadores Campo Mourão 2026 (IPPLAN)"; a fonte original e a página do PDF
+estão na descrição de cada indicador. Para corrigir ou acrescentar um valor, edite o CSV e rode o `setup-dados.sh`.
+
+| Códigos | O que é | Período | Por que não é automático |
+|---|---|---|---|
+| GP-007, GP-079 a GP-082 | VAF total e por setor (SEFA-PR) | 2024 | SEFA-PR não tem API; os dados saem pela BDEweb do IPARDES (formulário) |
+| GP-010, GP-011 | ICMS por origem e ICMS ecológico (SEFA-PR) | 2025 | idem |
+| AGR-009, AGR-019 a AGR-021 | CFEM arrecadada, distribuída e por substância (ANM) | 2019–2025 | Servidor de dados abertos da ANM fora do ar (16–17/11/2026). Automatizar quando voltar |
+| CUL-001 a CUL-003 | Bibliotecas e equipamentos culturais (SEEC-PR) | 2017 | Só via IPARDES |
+| SAU-001 | Estabelecimentos de saúde | 2025 | A API do CNES devolve só 59 dos 683; dá para automatizar por `br_ms_cnes` na Base dos Dados |
+| SAU-008, SAU-010, SAU-018 a SAU-021 | Mortalidade materna, óbitos por capítulo do CID-10, óbitos maternos | 2017–2025 | TabNet (formulário); dá para automatizar por `br_ms_sim` na Base dos Dados |
+| GP-073 a GP-077, SAU-017 | PIA 2010; IDHM Educação, Longevidade e Renda; renda per capita; esperança de vida | 1991, 2000, 2010 | Atlas Brasil sem API de download direto |
+| GP-017 (2014 e 2018) | Eleitores aptos em Campo Mourão e na COMCAM | 2014, 2018 | Estão no TSE (`baixar_tse.py --anos 2014,2018`, ~300 MB por ano); copiados do PDF para não baixar 600 MB |
+| GP-065 a GP-068 | Membros dos conselhos municipais | 2018 | Só na Prefeitura |
+| GP-069 | Postos de atendimento bancário | 2025 | ESTBAN não traz postos por tipo |
+| GP-070 a GP-072 | 13º salário: valor injetado, valor médio, beneficiários (DIEESE) | 2017, 2018 | Estimativa do DIEESE, publicada só em notas |
+| GP-078 | Índice de geração de receita própria | 2013–2016 | Cálculo antigo do IBGE Cidades, descontinuado |
+| DEM-005 a DEM-007 | Taxa de urbanização, distância à capital, altitude | 2018, 2025 | Dados cadastrais |
+| EDU-002, EDU-006, EDU-030 a EDU-041 | Escolas (total), docentes e cursos das IES, alunos de fora, educação especial, lista de espera em creche, despesa por aluno | 2017–2025 | Levantamentos do CODECAM nas IES e da Secretaria de Educação |
+
+Ficaram de fora, de propósito:
+- **Valores inconsistentes no PDF**, que ficaram sem dado: ICMS ecológico da região (maior que o do Paraná),
+  estabelecimentos de saúde da região e do Paraná (região menor que o município), VAF recursos/autos do Paraná (número ilegível).
+- **EJA** (o ano da tabela está cortado no PDF) e **população ocupada por atividade, Censo 2010** (linhas em vermelho no
+  PDF, sinal de revisão pendente).
+- **IFGF e IFDM antigos** (metodologia anterior, não comparável com a série atual) e **aprovação por escola municipal**.
+- **Censo Agropecuário 2017, produção de origem animal e lavouras menores**: estão no SIDRA e devem entrar em `baixar_ibge.py`.
+
+## Ainda sem nenhum valor
+
+| Código | Motivo | Onde buscar |
 |---|---|---|
-| GP-007 VAF, GP-010 ICMS por origem, GP-011 ICMS ecológico | SEFA-PR não tem API; os dados saem pelo IPARDES | BDEweb do IPARDES (consulta por formulário) |
-| AGR-009 CFEM arrecadada no município | O servidor de dados abertos da ANM não respondeu (nem por script, nem pelo navegador, em 16–17/11/2026) | app.anm.gov.br/dadosabertos/ARRECADACAO (CFEM_Arrecadacao.csv), quando voltar. A cota-parte recebida já vem do SICONFI (AGR-018) |
-| CUL-001, CUL-002 bibliotecas e equipamentos culturais | SEEC-PR, só via IPARDES | BDEweb do IPARDES |
+| SEG-002 taxa de homicídios | O PDF não traz o número, e a SESP-PR publica só em relatórios PDF | seguranca.pr.gov.br; ou óbitos por agressão (CID X85–Y09) em `br_ms_sim` |
 | ACTs: lista oficial de subclasses CNAE de "transporte aquaviário" e "cultura e lazer" | Não foi possível deduzir dos números | Metodologia do IPEA (SIMT) ou a consulta original do IPARDES |
-| SAU-001 estabelecimentos de saúde | A API de dados abertos do CNES devolveu só 59 estabelecimentos para o município (o documento do IPPLAN cita 683) | TabNet do DATASUS, ou `br_ms_cnes` na Base dos Dados |
-| SAU-008 mortalidade materna, SAU-010 óbitos por capítulo CID-10 | Só no TabNet (formulário) ou nos microdados do SIM | TabNet, ou `br_ms_sim.municipio_causa` na Base dos Dados |
-| SEG-002 taxa de homicídios | SESP-PR publica em relatórios PDF | seguranca.pr.gov.br |
-| EDU-002 escolas (total), EDU-006 docentes do ensino superior por titulação | Escola que oferece várias etapas seria contada mais de uma vez; docentes do superior só existem por sede da instituição (UTFPR e Unespar têm sede fora) | Sinopse do Censo Escolar (INEP); as próprias IES |
-| GP-004 PEA / PIA | A PNAD Contínua não tem resultado por município; só o Censo (amostra) | SIDRA, quando sair a amostra do Censo 2022 |
-| Conselhos municipais, 13º salário (DIEESE), cursos e alunos por IES | Não existem em base pública estruturada | Prefeitura, DIEESE e as próprias instituições |
 
 ## Regras para o dado aparecer certo no painel
 
@@ -142,4 +166,10 @@ Ao digitar novos valores do PDF, não repita períodos que já vêm de um script
   - `polarity = LOWER_BETTER` (mortalidade, reprovação, abandono, posição em ranking) ou `HIGHER_BETTER`
     (índices, notas, aprovação); vazio quando não há leitura óbvia. O painel escreve "menor é melhor".
 - A visão geral só mostra cards depois de escolhida uma categoria (12 por vez, primeiro os que têm dado).
+- **Crescimento ou queda entre dois anos** (seção Evolução): variação % de Campo Mourão, COMCAM e Paraná entre os anos
+  escolhidos, com os valores e a diferença embaixo. Cor verde/vermelha só quando o indicador tem `polarity`.
+  Para `%` a diferença aparece em pontos percentuais (p.p.). Com valor inicial zero não existe variação %: mostra só a diferença.
+- **Gráfico com COMCAM e Paraná**: para `kind = TOTAL` o padrão é o modo "Crescimento" (cada linha = 100 no ano inicial),
+  porque as escalas não cabem no mesmo eixo; para taxas, os valores. Território sem valor no ano base fica fora do modo
+  "Crescimento", com aviso.
 

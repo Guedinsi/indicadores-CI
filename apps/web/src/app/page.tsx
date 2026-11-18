@@ -9,27 +9,23 @@ import {
   type ComparisonResponse,
   type IndicatorCard,
   type IndicatorKind,
-  type IndicatorPolarity,
-  type SeriesPoint,
   type SeriesResponse,
 } from "@/lib/api";
 import { AuthLink } from "@/components/auth-link";
+import { EstadoVazio } from "@/components/estado-vazio";
+import { Evolucao } from "@/components/evolucao";
+import { formatarValor, leitura } from "@/lib/formatacao";
+
+/** Territórios comparados no gráfico de evolução (códigos da tabela territory). */
+const TERRITORIOS_COMPARADOS = [
+  { codigo: "COMCAM", id: "REGIAO", nome: "COMCAM", comArtigo: "a COMCAM", cor: "#2563eb" },
+  { codigo: "41", id: "ESTADO", nome: "Paraná", comArtigo: "o Paraná", cor: "#d97706" },
+];
 
 /** Resultado de uma requisição junto com a chave dos filtros usados nela. */
 type Loaded<T> = { key: string; data: T } | null;
 
-function formatarValor(valor: number | null): string {
-  if (valor === null) return "--";
-  return valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
-}
-
 const LIMITE_CARDS = 12;
-
-function leitura(polaridade: IndicatorPolarity): string | null {
-  if (polaridade === "LOWER_BETTER") return "menor é melhor";
-  if (polaridade === "HIGHER_BETTER") return "maior é melhor";
-  return null;
-}
 
 function formatarParticipacao(parte: number, todo: number): string {
   const pct = (parte / todo) * 100;
@@ -37,148 +33,8 @@ function formatarParticipacao(parte: number, todo: number): string {
   return `${pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
-function periodoEmAnos(periodo: string): number {
-  const [ano, mes] = periodo.split("-").map(Number);
-  return ano + (mes ? (mes - 1) / 12 : 0);
-}
-
 function mensagemDeErro(e: unknown): string {
   return e instanceof Error ? e.message : "erro desconhecido";
-}
-
-function EstadoVazio({
-  icone,
-  titulo,
-  texto,
-}: {
-  icone: string;
-  titulo: string;
-  texto: string;
-}) {
-  return (
-    <div className="text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-        {icone}
-      </div>
-      <p className="font-medium text-slate-700">{titulo}</p>
-      <p className="mt-1 text-sm text-slate-400">{texto}</p>
-    </div>
-  );
-}
-
-function GraficoEvolucao({
-  pontos,
-  unidade,
-}: {
-  pontos: SeriesPoint[];
-  unidade: string | null;
-}) {
-  const validos = pontos.filter(
-    (p): p is { period: string; value: number } => p.value !== null,
-  );
-
-  if (validos.length === 0) {
-    return (
-      <EstadoVazio
-        icone="↗"
-        titulo="Sem dados para este indicador"
-        texto="Ainda não há valores gravados para Campo Mourão."
-      />
-    );
-  }
-
-  const W = 640;
-  const H = 260;
-  const pad = { top: 20, right: 24, bottom: 36, left: 56 };
-  const larguraUtil = W - pad.left - pad.right;
-  const alturaUtil = H - pad.top - pad.bottom;
-
-  const valores = validos.map((p) => p.value);
-  const minimo = Math.min(...valores);
-  const maximo = Math.max(...valores);
-  const folga = maximo === minimo ? Math.abs(maximo) * 0.1 || 1 : (maximo - minimo) * 0.15;
-  const yMin = minimo >= 0 ? Math.max(minimo - folga, 0) : minimo - folga;
-  const yMax = maximo + folga;
-
-  const tempos = validos.map((p) => periodoEmAnos(p.period));
-  const tMin = Math.min(...tempos);
-  const tMax = Math.max(...tempos);
-  const x = (i: number) =>
-    tMax === tMin
-      ? pad.left + larguraUtil / 2
-      : pad.left + ((tempos[i] - tMin) / (tMax - tMin)) * larguraUtil;
-  const y = (v: number) =>
-    pad.top + (1 - (v - yMin) / (yMax - yMin)) * alturaUtil;
-
-  const linha = validos.map((p, i) => `${x(i)},${y(p.value)}`).join(" ");
-  const marcasY = [yMax, (yMax + yMin) / 2, yMin];
-  const comRotulo = new Set<number>();
-  let ultimoRotulo = -Infinity;
-  validos.forEach((_, i) => {
-    if (x(i) - ultimoRotulo >= 48) {
-      comRotulo.add(i);
-      ultimoRotulo = x(i);
-    }
-  });
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="h-full w-full"
-      role="img"
-      aria-label={`Evolução do indicador${unidade ? ` (${unidade})` : ""}`}
-    >
-      {marcasY.map((v) => (
-        <g key={v}>
-          <line
-            x1={pad.left}
-            x2={W - pad.right}
-            y1={y(v)}
-            y2={y(v)}
-            stroke="#e2e8f0"
-          />
-          <text
-            x={pad.left - 8}
-            y={y(v) + 4}
-            textAnchor="end"
-            fontSize="11"
-            fill="#64748b"
-          >
-            {formatarValor(Number(v.toFixed(4)))}
-          </text>
-        </g>
-      ))}
-
-      {validos.length > 1 && (
-        <polyline
-          points={linha}
-          fill="none"
-          stroke="#0f172a"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-        />
-      )}
-
-      {validos.map((p, i) => (
-        <g key={p.period}>
-          <circle cx={x(i)} cy={y(p.value)} r="4.5" fill="#0f172a">
-            <title>{`${p.period}: ${formatarValor(p.value)}${unidade ? ` ${unidade}` : ""}`}</title>
-          </circle>
-          {comRotulo.has(i) && (
-            <text
-              x={x(i)}
-              y={H - 12}
-              textAnchor="middle"
-              fontSize="11"
-              fill="#64748b"
-            >
-              {p.period}
-            </text>
-          )}
-        </g>
-      ))}
-    </svg>
-  );
 }
 
 function ParticipacaoComparativo({
@@ -316,7 +172,7 @@ export default function Home() {
   const [periodos, setPeriodos] = useState<string[]>([]);
   const [indicadores, setIndicadores] = useState<Loaded<IndicatorCard[]>>(null);
   const [detalhe, setDetalhe] = useState<
-    Loaded<{ serie: SeriesResponse; comparativo: ComparisonResponse }>
+    Loaded<{ series: SeriesResponse[]; comparativo: ComparisonResponse }>
   >(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -364,15 +220,18 @@ export default function Home() {
     if (indicadorSelecionado === "todos") return;
     let cancelado = false;
     Promise.all([
-      api.series(indicadorSelecionado),
+      Promise.all([
+        api.series(indicadorSelecionado),
+        ...TERRITORIOS_COMPARADOS.map((t) => api.series(indicadorSelecionado, t.codigo)),
+      ]),
       api.comparison(
         indicadorSelecionado,
         periodoSelecionado === "todos" ? undefined : periodoSelecionado,
       ),
     ])
-      .then(([serie, comparativo]) => {
+      .then(([series, comparativo]) => {
         if (cancelado) return;
-        setDetalhe({ key: chaveDetalhe, data: { serie, comparativo } });
+        setDetalhe({ key: chaveDetalhe, data: { series, comparativo } });
         setErro(null);
       })
       .catch((e: unknown) => {
@@ -398,7 +257,7 @@ export default function Home() {
     : candidatos.slice(0, LIMITE_CARDS);
   const ocultos = candidatos.length - indicadoresVisiveis.length;
   const leituraDetalhe = detalhe?.key === chaveDetalhe
-    ? leitura(detalhe.data.serie.indicator.polarity)
+    ? leitura(detalhe.data.series[0].indicator.polarity)
     : null;
 
   const detalheAtual = detalhe?.key === chaveDetalhe ? detalhe.data : null;
@@ -691,24 +550,45 @@ export default function Home() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Acompanhe a evolução dos indicadores ao longo dos períodos
+              Crescimento ou queda entre dois anos e evolução de Campo Mourão
+              comparada com a COMCAM e o Paraná
               {leituraDetalhe ? ` · ${leituraDetalhe}` : ""}.
             </p>
           </div>
 
-          <div className="flex h-80 items-center justify-center rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
             {indicadorSelecionado === "todos" ? (
-              <EstadoVazio
-                icone="↗"
-                titulo="Selecione um indicador"
-                texto="Escolha um indicador nos filtros para ver sua evolução."
-              />
+              <div className="py-10">
+                <EstadoVazio
+                  icone="↗"
+                  titulo="Selecione um indicador"
+                  texto="Escolha um indicador nos filtros para ver sua evolução."
+                />
+              </div>
             ) : !detalheAtual ? (
-              <p className="text-sm text-slate-400">Carregando...</p>
+              <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>
             ) : (
-              <GraficoEvolucao
-                pontos={detalheAtual.serie.points}
-                unidade={detalheAtual.serie.indicator.unit}
+              <Evolucao
+                key={indicadorSelecionado}
+                unidade={detalheAtual.series[0].indicator.unit}
+                tipo={detalheAtual.series[0].indicator.kind}
+                polaridade={detalheAtual.series[0].indicator.polarity}
+                series={[
+                  {
+                    id: "MUNICIPIO",
+                    nome: detalheAtual.series[0].territory.name,
+                    comArtigo: "",
+                    cor: "#0f172a",
+                    pontos: detalheAtual.series[0].points,
+                  },
+                  ...TERRITORIOS_COMPARADOS.map((t, i) => ({
+                    id: t.id,
+                    nome: t.nome,
+                    comArtigo: t.comArtigo,
+                    cor: t.cor,
+                    pontos: detalheAtual.series[i + 1].points,
+                  })),
+                ]}
               />
             )}
           </div>
