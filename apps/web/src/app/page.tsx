@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DashboardShell } from "@/components/dashboard-shell";
 import {
   API_URL,
   api,
@@ -295,6 +296,7 @@ export default function Home() {
   const detalheAtual = detalhe?.key === chaveDetalhe ? detalhe.data : null;
 
   return (
+  <DashboardShell>
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-8">
@@ -620,5 +622,6 @@ export default function Home() {
         </footer>
       </div>
     </main>
+    </DashboardShell>
   );
 }
