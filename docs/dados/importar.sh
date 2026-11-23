@@ -51,6 +51,14 @@ n_virgula="$(printf '%s' "$cabecalho" | tr -cd ',' | wc -c)"
 delim=','
 (( n_ponto_virgula > n_virgula )) && delim=';'
 
+# Catálogo de indicadores: as colunas vêm do cabeçalho, para aceitar arquivos com ou sem kind/polarity
+cols=()
+if [[ "$tipo" == "indicadores" ]]; then
+  lista="$(printf '%s' "$cabecalho" | sed 's/^\xEF\xBB\xBF//' | tr -d '\r" ' | tr "$delim" ',' | tr '[:upper:]' '[:lower:]')"
+  [[ "$lista" =~ ^[a-z_]+(,[a-z_]+)*$ ]] || { echo "Erro: cabeçalho inválido no CSV de indicadores: $cabecalho"; exit 1; }
+  cols=(-v "cols=$lista")
+fi
+
 finish="COMMIT"
 [[ "$modo" == "--teste" ]] && finish="ROLLBACK"
 
@@ -62,7 +70,7 @@ docker compose cp "$arquivo_abs" db:/tmp/import.csv > /dev/null
 docker compose exec -T -u root db chmod 644 /tmp/import.csv
 status=0
 docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q \
-  -v ON_ERROR_STOP=1 -v file=/tmp/import.csv -v delim="$delim" -v finish="$finish" \
+  -v ON_ERROR_STOP=1 -v file=/tmp/import.csv -v delim="$delim" -v finish="$finish" "${cols[@]}" \
   -f - < "$raiz/docs/dados/importar-$tipo.sql" || status=$?
 docker compose exec -T -u root db rm -f /tmp/import.csv
 

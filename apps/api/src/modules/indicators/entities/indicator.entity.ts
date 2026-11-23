@@ -15,6 +15,11 @@ import { DataSourceEntity } from '../../ingestion/entities/data-source.entity.js
 import { Axis } from './axis.entity.js';
 import { IndicatorValue } from './indicator-value.entity.js';
 
+/** TOTAL = contagem ou montante que se soma entre territórios. RATE = taxa, índice, média ou posição. */
+export type IndicatorKind = 'TOTAL' | 'RATE';
+
+export type IndicatorPolarity = 'HIGHER_BETTER' | 'LOWER_BETTER';
+
 /** Definição de um indicador (o catálogo). Os valores ficam em IndicatorValue. */
 @Entity('indicator')
 @Unique('UQ_indicator_code', ['code'])
@@ -43,6 +48,14 @@ export class Indicator {
   /** Ex.: "ANNUAL", "MONTHLY". */
   @Column({ type: 'varchar', length: 20, nullable: true })
   periodicity: string | null;
+
+  /** Define como comparar territórios: totais não cabem na mesma escala, taxas sim. null = não classificado. */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  kind: IndicatorKind | null;
+
+  /** Se menor ou maior é melhor (ex.: mortalidade, posição em ranking). null = sem leitura definida. */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  polarity: IndicatorPolarity | null;
 
   @Index('IDX_indicator_axis_id')
   @Column({ name: 'axis_id', type: 'int' })

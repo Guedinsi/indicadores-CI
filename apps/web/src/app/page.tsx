@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DashboardShell } from "@/components/dashboard-shell";
 import {
   API_URL,
   api,
@@ -8,154 +9,99 @@ import {
   type ComparisonItem,
   type ComparisonResponse,
   type IndicatorCard,
-  type SeriesPoint,
+  type IndicatorKind,
   type SeriesResponse,
 } from "@/lib/api";
 import { AuthLink } from "@/components/auth-link";
+import { EstadoVazio } from "@/components/estado-vazio";
+import { Evolucao } from "@/components/evolucao";
+import { formatarValor, leitura } from "@/lib/formatacao";
+
+/** Territórios comparados no gráfico de evolução (códigos da tabela territory). */
+const TERRITORIOS_COMPARADOS = [
+  { codigo: "COMCAM", id: "REGIAO", nome: "COMCAM", comArtigo: "a COMCAM", cor: "#2563eb" },
+  { codigo: "41", id: "ESTADO", nome: "Paraná", comArtigo: "o Paraná", cor: "#d97706" },
+];
 
 /** Resultado de uma requisição junto com a chave dos filtros usados nela. */
 type Loaded<T> = { key: string; data: T } | null;
 
-function formatarValor(valor: number | null): string {
-  if (valor === null) return "--";
-  return valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+const LIMITE_CARDS = 12;
+
+function formatarParticipacao(parte: number, todo: number): string {
+  const pct = (parte / todo) * 100;
+  if (pct < 0.01) return "menos de 0,01%";
+  return `${pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
 function mensagemDeErro(e: unknown): string {
   return e instanceof Error ? e.message : "erro desconhecido";
 }
 
-function EstadoVazio({
-  icone,
-  titulo,
-  texto,
-}: {
-  icone: string;
-  titulo: string;
-  texto: string;
-}) {
-  return (
-    <div className="text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-        {icone}
-      </div>
-      <p className="font-medium text-slate-700">{titulo}</p>
-      <p className="mt-1 text-sm text-slate-400">{texto}</p>
-    </div>
-  );
-}
-
-function GraficoEvolucao({
-  pontos,
-  unidade,
-}: {
-  pontos: SeriesPoint[];
-  unidade: string | null;
-}) {
-  const validos = pontos.filter(
-    (p): p is { period: string; value: number } => p.value !== null,
-  );
-
-  if (validos.length === 0) {
-    return (
-      <EstadoVazio
-        icone="↗"
-        titulo="Sem dados para este indicador"
-        texto="Ainda não há valores gravados para Campo Mourão."
-      />
-    );
-  }
-
-  const W = 640;
-  const H = 260;
-  const pad = { top: 20, right: 24, bottom: 36, left: 56 };
-  const larguraUtil = W - pad.left - pad.right;
-  const alturaUtil = H - pad.top - pad.bottom;
-
-  const valores = validos.map((p) => p.value);
-  const minimo = Math.min(...valores);
-  const maximo = Math.max(...valores);
-  const folga = maximo === minimo ? Math.abs(maximo) * 0.1 || 1 : (maximo - minimo) * 0.15;
-  const yMin = minimo - folga;
-  const yMax = maximo + folga;
-
-  const x = (i: number) =>
-    validos.length === 1
-      ? pad.left + larguraUtil / 2
-      : pad.left + (i / (validos.length - 1)) * larguraUtil;
-  const y = (v: number) =>
-    pad.top + (1 - (v - yMin) / (yMax - yMin)) * alturaUtil;
-
-  const linha = validos.map((p, i) => `${x(i)},${y(p.value)}`).join(" ");
-  const marcasY = [yMax, (yMax + yMin) / 2, yMin];
-  const passoRotulo = Math.ceil(validos.length / 8);
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="h-full w-full"
-      role="img"
-      aria-label={`Evolução do indicador${unidade ? ` (${unidade})` : ""}`}
-    >
-      {marcasY.map((v) => (
-        <g key={v}>
-          <line
-            x1={pad.left}
-            x2={W - pad.right}
-            y1={y(v)}
-            y2={y(v)}
-            stroke="#e2e8f0"
-          />
-          <text
-            x={pad.left - 8}
-            y={y(v) + 4}
-            textAnchor="end"
-            fontSize="11"
-            fill="#64748b"
-          >
-            {formatarValor(Number(v.toFixed(4)))}
-          </text>
-        </g>
-      ))}
-
-      {validos.length > 1 && (
-        <polyline
-          points={linha}
-          fill="none"
-          stroke="#0f172a"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-        />
-      )}
-
-      {validos.map((p, i) => (
-        <g key={p.period}>
-          <circle cx={x(i)} cy={y(p.value)} r="4.5" fill="#0f172a">
-            <title>{`${p.period}: ${formatarValor(p.value)}${unidade ? ` ${unidade}` : ""}`}</title>
-          </circle>
-          {i % passoRotulo === 0 && (
-            <text
-              x={x(i)}
-              y={H - 12}
-              textAnchor="middle"
-              fontSize="11"
-              fill="#64748b"
-            >
-              {p.period}
-            </text>
-          )}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function BarrasComparativo({
+function ParticipacaoComparativo({
   itens,
   unidade,
+  mostrarParticipacao,
 }: {
   itens: ComparisonItem[];
   unidade: string | null;
+  mostrarParticipacao: boolean;
+}) {
+  const municipio = itens.find((i) => i.type === "MUNICIPIO")?.value ?? null;
+
+  return (
+    <ul className="w-full divide-y divide-slate-100">
+      {itens.map((item) => {
+        const destaque = item.type === "MUNICIPIO";
+        const participacao =
+          mostrarParticipacao &&
+          !destaque &&
+          municipio !== null &&
+          municipio > 0 &&
+          item.value !== null &&
+          item.value > 0
+            ? formatarParticipacao(municipio, item.value)
+            : null;
+
+        return (
+          <li
+            key={item.territory}
+            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3"
+          >
+            <span
+              className={`text-sm ${
+                destaque ? "font-semibold text-slate-900" : "text-slate-600"
+              }`}
+            >
+              {item.territory}
+            </span>
+            <span className="text-right">
+              <span className="text-sm font-medium text-slate-700">
+                {item.value === null
+                  ? "sem dados"
+                  : `${formatarValor(item.value)}${unidade ? ` ${unidade}` : ""}`}
+              </span>
+              {participacao && (
+                <span className="block text-xs text-slate-500">
+                  Campo Mourão representa {participacao}
+                </span>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Comparativo({
+  itens,
+  unidade,
+  tipo,
+}: {
+  itens: ComparisonItem[];
+  unidade: string | null;
+  tipo: IndicatorKind;
 }) {
   if (itens.length === 0) {
     return (
@@ -167,14 +113,24 @@ function BarrasComparativo({
     );
   }
 
-  const maximo = Math.max(...itens.map((i) => i.value ?? 0), 0);
+  if (tipo !== "RATE") {
+    return (
+      <ParticipacaoComparativo
+        itens={itens}
+        unidade={unidade}
+        mostrarParticipacao={tipo === "TOTAL"}
+      />
+    );
+  }
+
+  const maximo = Math.max(...itens.map((i) => Math.abs(i.value ?? 0)), 0);
 
   return (
     <ul className="w-full space-y-4">
       {itens.map((item) => {
         const largura =
           item.value !== null && maximo > 0
-            ? Math.max((item.value / maximo) * 100, 0)
+            ? (Math.abs(item.value) / maximo) * 100
             : 0;
         const destaque = item.type === "MUNICIPIO";
 
@@ -211,19 +167,19 @@ export default function Home() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("todas");
   const [indicadorSelecionado, setIndicadorSelecionado] = useState("todos");
   const [periodoSelecionado, setPeriodoSelecionado] = useState("todos");
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   const [categorias, setCategorias] = useState<Axis[]>([]);
   const [periodos, setPeriodos] = useState<string[]>([]);
   const [indicadores, setIndicadores] = useState<Loaded<IndicatorCard[]>>(null);
   const [detalhe, setDetalhe] = useState<
-    Loaded<{ serie: SeriesResponse; comparativo: ComparisonResponse }>
+    Loaded<{ series: SeriesResponse[]; comparativo: ComparisonResponse }>
   >(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const chaveIndicadores = `${categoriaSelecionada}|${periodoSelecionado}`;
   const chaveDetalhe = `${indicadorSelecionado}|${periodoSelecionado}`;
 
-  // Categorias e períodos disponíveis (uma vez)
   useEffect(() => {
     let cancelado = false;
     Promise.all([api.axes(), api.periods()])
@@ -241,7 +197,6 @@ export default function Home() {
     };
   }, []);
 
-  // Cards de indicadores (mudam com categoria e período)
   useEffect(() => {
     let cancelado = false;
     api
@@ -262,20 +217,22 @@ export default function Home() {
     };
   }, [categoriaSelecionada, periodoSelecionado, chaveIndicadores]);
 
-  // Gráfico de evolução e comparativo (só quando há um indicador selecionado)
   useEffect(() => {
     if (indicadorSelecionado === "todos") return;
     let cancelado = false;
     Promise.all([
-      api.series(indicadorSelecionado),
+      Promise.all([
+        api.series(indicadorSelecionado),
+        ...TERRITORIOS_COMPARADOS.map((t) => api.series(indicadorSelecionado, t.codigo)),
+      ]),
       api.comparison(
         indicadorSelecionado,
         periodoSelecionado === "todos" ? undefined : periodoSelecionado,
       ),
     ])
-      .then(([serie, comparativo]) => {
+      .then(([series, comparativo]) => {
         if (cancelado) return;
-        setDetalhe({ key: chaveDetalhe, data: { serie, comparativo } });
+        setDetalhe({ key: chaveDetalhe, data: { series, comparativo } });
         setErro(null);
       })
       .catch((e: unknown) => {
@@ -288,13 +245,26 @@ export default function Home() {
 
   const listaIndicadores = indicadores?.data ?? [];
   const atualizandoIndicadores = indicadores?.key !== chaveIndicadores;
-  const indicadoresVisiveis = listaIndicadores.filter(
-    (i) => indicadorSelecionado === "todos" || i.code === indicadorSelecionado,
-  );
+  const semCategoria =
+    categoriaSelecionada === "todas" && indicadorSelecionado === "todos";
+  const comDado = listaIndicadores.filter((i) => i.value !== null);
+  const candidatos = semCategoria
+    ? []
+    : indicadorSelecionado === "todos"
+      ? [...comDado, ...listaIndicadores.filter((i) => i.value === null)]
+      : listaIndicadores.filter((i) => i.code === indicadorSelecionado);
+  const indicadoresVisiveis = mostrarTodos
+    ? candidatos
+    : candidatos.slice(0, LIMITE_CARDS);
+  const ocultos = candidatos.length - indicadoresVisiveis.length;
+  const leituraDetalhe = detalhe?.key === chaveDetalhe
+    ? leitura(detalhe.data.series[0].indicator.polarity)
+    : null;
 
   const detalheAtual = detalhe?.key === chaveDetalhe ? detalhe.data : null;
 
   return (
+  <DashboardShell>
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-8">
@@ -341,7 +311,9 @@ export default function Home() {
           <div className="mb-4">
             <h2 className="text-xl font-bold text-slate-900">Visão geral</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Principais índices disponíveis no painel
+              {semCategoria
+                ? "Escolha uma categoria ou um indicador para ver os valores"
+                : "Indicadores de Campo Mourão na seleção atual"}
               {atualizandoIndicadores && !erro ? " · atualizando..." : ""}
             </p>
           </div>
@@ -360,11 +332,14 @@ export default function Home() {
                     <p className="mt-3 text-3xl font-bold text-slate-900">
                       {formatarValor(indicador.value)}
                     </p>
-                    {indicador.value !== null && indicador.unit && (
-                      <p className="mt-1 text-xs text-slate-400">
-                        {indicador.unit}
-                      </p>
-                    )}
+                    {indicador.value !== null &&
+                      (indicador.unit || leitura(indicador.polarity)) && (
+                        <p className="mt-1 text-xs text-slate-400">
+                          {[indicador.unit, leitura(indicador.polarity)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
                     {indicador.axisAbbreviation ?? indicador.code.slice(0, 2)}
@@ -374,9 +349,11 @@ export default function Home() {
                   {indicador.description ?? indicador.name}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {indicador.period
+                  {indicador.value !== null
                     ? `Referência: ${indicador.period}`
-                    : "Sem dados"}
+                    : indicador.period
+                      ? `Sem dados em ${indicador.period}`
+                      : "Sem dados"}
                 </p>
               </div>
             ))}
@@ -397,11 +374,24 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
-                  Indicadores cadastrados na seleção atual
+                  Indicadores cadastrados na seleção atual ({comDado.length}{" "}
+                  com dado)
                 </p>
               </div>
             )}
           </div>
+
+          {(ocultos > 0 || (mostrarTodos && candidatos.length > LIMITE_CARDS)) && (
+            <button
+              type="button"
+              onClick={() => setMostrarTodos(!mostrarTodos)}
+              className="mt-4 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              {mostrarTodos
+                ? "Mostrar menos"
+                : `Mostrar os outros ${ocultos} indicadores`}
+            </button>
+          )}
 
           {indicadores && listaIndicadores.length === 0 && (
             <p className="mt-4 text-sm text-slate-500">
@@ -434,6 +424,7 @@ export default function Home() {
                 onChange={(e) => {
                   setCategoriaSelecionada(e.target.value);
                   setIndicadorSelecionado("todos");
+                  setMostrarTodos(false);
                 }}
               >
                 <option value="todas">Todas</option>
@@ -516,6 +507,7 @@ export default function Home() {
                   onClick={() => {
                     setCategoriaSelecionada(categoria.slug);
                     setIndicadorSelecionado("todos");
+                    setMostrarTodos(false);
                   }}
                   className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
@@ -560,23 +552,45 @@ export default function Home() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Acompanhe a evolução dos indicadores ao longo dos períodos.
+              Crescimento ou queda entre dois anos e evolução de Campo Mourão
+              comparada com a COMCAM e o Paraná
+              {leituraDetalhe ? ` · ${leituraDetalhe}` : ""}.
             </p>
           </div>
 
-          <div className="flex h-80 items-center justify-center rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
             {indicadorSelecionado === "todos" ? (
-              <EstadoVazio
-                icone="↗"
-                titulo="Selecione um indicador"
-                texto="Escolha um indicador nos filtros para ver sua evolução."
-              />
+              <div className="py-10">
+                <EstadoVazio
+                  icone="↗"
+                  titulo="Selecione um indicador"
+                  texto="Escolha um indicador nos filtros para ver sua evolução."
+                />
+              </div>
             ) : !detalheAtual ? (
-              <p className="text-sm text-slate-400">Carregando...</p>
+              <p className="py-10 text-center text-sm text-slate-400">Carregando...</p>
             ) : (
-              <GraficoEvolucao
-                pontos={detalheAtual.serie.points}
-                unidade={detalheAtual.serie.indicator.unit}
+              <Evolucao
+                key={indicadorSelecionado}
+                unidade={detalheAtual.series[0].indicator.unit}
+                tipo={detalheAtual.series[0].indicator.kind}
+                polaridade={detalheAtual.series[0].indicator.polarity}
+                series={[
+                  {
+                    id: "MUNICIPIO",
+                    nome: detalheAtual.series[0].territory.name,
+                    comArtigo: "",
+                    cor: "#0f172a",
+                    pontos: detalheAtual.series[0].points,
+                  },
+                  ...TERRITORIOS_COMPARADOS.map((t, i) => ({
+                    id: t.id,
+                    nome: t.nome,
+                    comArtigo: t.comArtigo,
+                    cor: t.cor,
+                    pontos: detalheAtual.series[i + 1].points,
+                  })),
+                ]}
               />
             )}
           </div>
@@ -587,7 +601,10 @@ export default function Home() {
             <h2 className="text-xl font-bold text-slate-900">Comparativos</h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Compare Campo Mourão com a região, o estado e o país
+              {detalheAtual?.comparativo.indicator.kind === "TOTAL"
+                ? "Participação de Campo Mourão na região, no estado e no país"
+                : "Compare Campo Mourão com a região, o estado e o país"}
+              {leituraDetalhe ? ` · ${leituraDetalhe}` : ""}
               {detalheAtual?.comparativo.period
                 ? ` · período ${detalheAtual.comparativo.period}`
                 : ""}
@@ -605,9 +622,10 @@ export default function Home() {
             ) : !detalheAtual ? (
               <p className="text-sm text-slate-400">Carregando...</p>
             ) : (
-              <BarrasComparativo
+              <Comparativo
                 itens={detalheAtual.comparativo.values}
                 unidade={detalheAtual.comparativo.indicator.unit}
+                tipo={detalheAtual.comparativo.indicator.kind}
               />
             )}
           </div>
@@ -620,5 +638,6 @@ export default function Home() {
         </footer>
       </div>
     </main>
+    </DashboardShell>
   );
 }
