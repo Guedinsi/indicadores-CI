@@ -45,3 +45,7 @@ data/raw/
 !docs/dados/csv/valores-pdf-manual.csv
 !docs/dados/csv/removidos-ipplan.csv
 *.xlsx
+
+docs/dados/scripts/.cache/
+__pycache__/
+docs/dados/brutos/
