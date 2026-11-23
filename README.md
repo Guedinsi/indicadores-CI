@@ -18,14 +18,14 @@ Os indicadores são organizados por eixo (categoria) e comparados em quatro nív
 | Containerização | Docker e Docker Compose |
 | Autenticação | SuperTokens (e-mail e senha, sessão por cookie) |
 
-Os conectores das bases públicas e os cálculos entram em `modules/ingestion/` e em um módulo de cálculo, nas próximas etapas.
+A coleta dos dados nas bases públicas é feita por scripts Python em `docs/dados/scripts/` (veja [Carga de dados](#carga-de-dados)).
 
 ## Modelo de dados
 
 | Tabela | O que guarda |
 |---|---|
-| `axis` | Eixos/categorias (Economia, Educação, Saúde...) |
-| `indicator` | Catálogo: código, nome, unidade, fórmula, eixo e fonte |
+| `axis` | Eixos/categorias (Gestão Pública, Educação, Saúde...) |
+| `indicator` | Catálogo: código, nome, unidade, fórmula, eixo, fonte, tipo (`kind`: total ou taxa) e polaridade (`polarity`: maior ou menor é melhor) |
 | `territory` | Município, região, estado e país, com hierarquia (`parent_id`) |
 | `indicator_value` | Valor de um indicador para um território em um período |
 | `data_source` | Fontes públicas de onde os dados vêm |
@@ -41,6 +41,8 @@ Pontos importantes:
 - Node.js 20 ou superior (a versão usada está em `.nvmrc`: `nvm use`)
 - pnpm (via corepack: `corepack enable`)
 - Docker e Docker Compose
+- Python 3.10 ou superior, para os scripts de coleta de dados (só biblioteca padrão)
+- (Opcional) Projeto no Google Cloud, para os dados da Base dos Dados (RAIS, CAGED, leitos)
 
 ## Configuração inicial
 
@@ -103,21 +105,41 @@ O seed **não cria valores de indicadores**. Enquanto não houver dados importad
 
 ## Carga de dados
 
-Os dados entram no banco por CSVs versionados em `docs/dados/csv/` e por importadores que validam tudo antes de gravar (transação única, repetir é seguro, modo de teste com `--teste`). O passo a passo completo, com formato dos CSVs, regras e prompts úteis, está em [`docs/GUIA-DADOS.md`](docs/GUIA-DADOS.md).
+Os dados chegam ao banco em duas etapas: scripts Python baixam as bases públicas e gravam CSVs em `docs/dados/csv/`, e o importador valida e grava esses CSVs no PostgreSQL (transação única, repetir é seguro, modo de teste com `--teste`). Os CSVs de valores baixados (`valores-<fonte>.csv`) são gerados pelos scripts. Já o `eixos.csv`, os catálogos (`indicadores-*.csv`) e os valores digitados (`valores-ipplan.csv`, `valores-pdf-manual.csv`) não saem de nenhum script e precisam estar em `docs/dados/csv/` antes do `setup-dados.sh`.
 
 ```bash
-bash docs/dados/importar.sh eixos docs/dados/csv/eixos.csv --teste
-bash docs/dados/importar.sh indicadores docs/dados/csv/indicadores-ipplan.csv --teste
-bash docs/dados/importar.sh valores docs/dados/csv/valores-ipplan.csv --teste
+# 1. baixa todas as fontes automáticas (~25 min na primeira vez; depois usa o cache)
+python3 docs/dados/scripts/baixar_tudo.py
+python3 docs/dados/scripts/baixar_tudo.py --so ibge,siconfi    # só algumas fontes
+python3 docs/dados/scripts/baixar_tudo.py --pular bcb,tse      # pula as mais demoradas
 
-# baixa população, PIB, VAB, rebanhos e safras do IBGE (API pública) para um CSV
-python3 docs/dados/scripts/baixar_ibge.py
-
-# prepara o banco do zero e importa todos os CSVs de uma vez
+# 2. prepara o banco (migrations e seed) e importa eixos, catálogos e valores
 bash docs/dados/setup-dados.sh
 ```
 
-As fontes de cada indicador, conforme o documento do IPPLAN, estão em [`docs/dados/fontes.md`](docs/dados/fontes.md).
+Cada script também roda sozinho e aceita `--so CODIGO1,CODIGO2` (ex.: `python3 docs/dados/scripts/baixar_siconfi.py --desde 2022`). Para importar um arquivo só, conferindo antes:
+
+```bash
+bash docs/dados/importar.sh valores docs/dados/csv/valores-ibge.csv --teste   # valida e desfaz
+bash docs/dados/importar.sh valores docs/dados/csv/valores-ibge.csv           # grava
+```
+
+**Base dos Dados (RAIS, CAGED, leitos).** Precisa de um projeto no Google Cloud (o BigQuery tem 1 TB grátis por mês) e do pacote `basedosdados`, instalado num ambiente virtual:
+
+```bash
+python3 -m venv ~/.venvs/indicadores
+~/.venvs/indicadores/bin/pip install basedosdados
+export BD_BILLING_PROJECT_ID=id-do-seu-projeto      # coloque no ~/.bashrc para não repetir
+~/.venvs/indicadores/bin/python docs/dados/scripts/baixar_tudo.py   # com o Python do venv, inclui a Base dos Dados
+```
+
+Na primeira execução o pacote pede para autorizar a conta Google no navegador. Sem `BD_BILLING_PROJECT_ID`, o `baixar_tudo.py` pula essa fonte.
+
+**INEP (rendimento escolar e ensino superior).** O site do INEP não aceita download por script. Baixe os `.zip` pelo navegador (links no início de `docs/dados/scripts/ler_inep.py`) e salve, sem extrair, em `docs/dados/brutos/`. O `baixar_tudo.py` lê o que estiver lá.
+
+**Dados sem fonte online.** Os indicadores que só existem no documento do IPPLAN foram digitados em `docs/dados/csv/indicadores-pdf-manual.csv` e `valores-pdf-manual.csv`. Para corrigir um valor, edite o CSV e rode o `setup-dados.sh` de novo.
+
+As fontes de cada indicador, o período coberto, a conferência com o documento do IPPLAN e o que continua manual estão em [`docs/dados/fontes.md`](docs/dados/fontes.md).
 
 ## Autenticação (SuperTokens)
 
@@ -197,7 +219,7 @@ docker compose down              # para e remove os containers
 docker compose down -v           # idem, mas APAGA os dados do banco (volume)
 ```
 
-Para aplicar as migrations e o seed com o projeto rodando no Docker, rode-os pela sua máquina com o banco exposto na porta `5432` (`DB_HOST=localhost` no `.env`).
+Para aplicar as migrations, o seed e a carga de dados com o projeto rodando no Docker, rode `bash docs/dados/setup-dados.sh` pela sua máquina, com o banco exposto na porta `5432` (`DB_HOST=localhost` no `.env`).
 
 ## Qualidade de código
 
@@ -244,8 +266,10 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 - [x] Importadores CSV e guia de carga de dados
 - [x] Catálogo de indicadores do IPPLAN (CSV) e registro de fontes
 - [x] Autenticação com SuperTokens (login, cadastro e página do usuário)
-- [ ] Carga dos valores reais de todos os indicadores
-- [ ] Conectores e ingestão automática das bases governamentais
+- [x] Scripts de coleta das bases governamentais e carga dos valores reais (185 de 186 indicadores com dado)
+- [x] Comparativo com COMCAM e Paraná e crescimento entre dois anos no dashboard
+- [ ] Indicadores pendentes: taxa de homicídios e CFEM arrecadada (servidor da ANM fora do ar)
+- [ ] Ingestão agendada (hoje a atualização é manual, pelos scripts)
 - [ ] Cálculo dos indicadores
 - [ ] Papéis e permissões, confirmação de e-mail e recuperação de senha
 - [ ] Tradução do formulário de login para pt-BR
