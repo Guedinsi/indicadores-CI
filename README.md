@@ -72,14 +72,23 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 | `NEXT_PUBLIC_WEB_URL` | URL do site, usada pelo SuperTokens no navegador. Também embutida no build. |
 | `API_URL_INTERNAL` | URL da API acessada pelo servidor do Next dentro do Docker (`http://api:3001`). |
 | `CITY_IBGE_CODE` | (Opcional) Código IBGE do município exibido no dashboard. Padrão `4104303` (Campo Mourão). |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | Servidor de e-mail da confirmação de conta e da redefinição de senha. Em desenvolvimento, o Mailpit (`localhost:1025`, sem usuário). Em produção, um SMTP real (`SMTP_SECURE=true` na porta 465). |
+| `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | Remetente dos e-mails. |
+| `MAIL_UI_PORT` | Porta da caixa de entrada do Mailpit (padrão `8025`). |
+| `PASSWORD_BREACH_CHECK` | `true` recusa senhas que aparecem em vazamentos conhecidos (consulta o Have I Been Pwned). |
+| `RATE_LIMIT_AUTH`, `RATE_LIMIT_GERAL` | Limite de requisições por IP: login/cadastro (a cada 15 min) e demais rotas da API (por minuto). |
+| `TRUST_PROXY` | Em produção atrás de proxy reverso, para o limite usar o IP real do cliente. Vazio em desenvolvimento. |
+| `COOKIE_DOMAIN` | Domínio do cookie de sessão, quando site e API ficam em subdomínios diferentes. Vazio em desenvolvimento. |
+
+`BD_BILLING_PROJECT_ID` (projeto do Google Cloud da Base dos Dados) não vai no `.env`: é lido pelos scripts de coleta a partir do terminal (veja [Carga de dados](#carga-de-dados)).
 
 ## Desenvolvimento local
 
 Fluxo recomendado para o dia a dia, com hot reload: apps rodando na máquina e apenas o banco no Docker.
 
 ```bash
-docker compose up -d db supertokens mailpit  
-pnpm --filter api migration:run      
+docker compose up -d db supertokens mailpit   # PostgreSQL, core do SuperTokens e caixa de e-mail de teste
+pnpm --filter api migration:run                # cria as tabelas (primeira vez e a cada nova migration)
 pnpm dev:api               # API em http://localhost:3001
 pnpm dev:web               # Web em http://localhost:3000
 ```
@@ -143,13 +152,13 @@ As fontes de cada indicador, o período coberto, a conferência com o documento 
 
 ## Autenticação (SuperTokens)
 
-Login e cadastro por e-mail e senha, com sessão por cookie. O core do SuperTokens roda em um container e guarda usuários e sessões em um banco `supertokens` no mesmo PostgreSQL.
+Login e cadastro por e-mail e senha, com sessão por cookie, confirmação de e-mail obrigatória e redefinição de senha. O core do SuperTokens roda em um container e guarda usuários e sessões em um banco `supertokens` no mesmo PostgreSQL. Os e-mails saem pelo SMTP configurado no `.env`; em desenvolvimento, caem no Mailpit (http://localhost:8025) e não chegam a ninguém de verdade.
 
-- **API:** as rotas `/api/auth/*` (login, cadastro, logout, refresh) são tratadas pelo SuperTokens. O `AuthGuard` protege rotas, e `GET /api/me` devolve os dados do usuário logado.
+- **API:** as rotas `/api/auth/*` (login, cadastro, logout, refresh, confirmação de e-mail e redefinição de senha) são tratadas pelo SuperTokens. O `AuthGuard` protege rotas, e `GET /api/me` devolve os dados do usuário logado.
 - **Web:** `/auth` mostra login e cadastro, e `/usuario` é a página do usuário (exige login). O botão "Entrar / Minha conta" fica no cabeçalho do dashboard.
 - O dashboard e os endpoints de indicadores continuam públicos.
 
-Para testar: suba o banco e o core (`docker compose up -d db supertokens`), rode a API e o site, abra http://localhost:3000, clique em **Entrar** e crie uma conta. Se o core não subir por falta do banco, crie-o uma vez:
+Para testar: suba o banco, o core e o Mailpit (`docker compose up -d db supertokens mailpit`), rode a API e o site, abra http://localhost:3000, clique em **Entrar** e crie uma conta. O link de confirmação aparece em http://localhost:8025. Se o core não subir por falta do banco, crie-o uma vez:
 
 ```bash
 set -a; source .env; set +a
@@ -196,7 +205,7 @@ Todas as rotas têm o prefixo `/api`.
 | `GET /api/indicators/:code/values?territory=` | Série temporal de um indicador |
 | `GET /api/indicators/:code/comparison?period=` | Município × região × estado × país no mesmo período |
 | `GET /api/me` | Dados do usuário logado (ID, e-mail, data de criação). Exige login: sem sessão retorna `401`. |
-| `/api/auth/*` | Login, cadastro, logout e refresh de sessão (SuperTokens) |
+| `/api/auth/*` | Login, cadastro, logout, refresh de sessão, confirmação de e-mail e redefinição de senha (SuperTokens) |
 
 Indicador inexistente retorna `404`. Os filtros `axis`, `period` e `territory` são opcionais. As rotas de indicadores são públicas.
 
@@ -211,7 +220,7 @@ pnpm --filter web start          # next start
 ## Executando tudo com Docker
 
 ```bash
-docker compose up --build        # builda e sobe db, supertokens, api e web
+docker compose up --build        # builda e sobe db, supertokens, mailpit, api e web
 docker compose up -d --build     # mesmo, em segundo plano
 docker compose logs -f api       # acompanha os logs de um serviço
 docker compose ps                # status dos containers
@@ -247,6 +256,9 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 | API        | http://localhost:3001 |
 | PostgreSQL | localhost:5432        |
 | SuperTokens (core) | http://localhost:3567 |
+| Mailpit (e-mails de teste) | http://localhost:8025 |
+| Dashboard (visão geral, evolução e comparativo) | http://localhost:3000 |
+| Páginas Indicadores e Comparativos (ainda só com título) | http://localhost:3000/indicadores, http://localhost:3000/comparativos |
 | Login e cadastro | http://localhost:3000/auth |
 | Página do usuário | http://localhost:3000/usuario |
 
@@ -271,6 +283,8 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 - [ ] Indicadores pendentes: taxa de homicídios e CFEM arrecadada (servidor da ANM fora do ar)
 - [ ] Ingestão agendada (hoje a atualização é manual, pelos scripts)
 - [ ] Cálculo dos indicadores
-- [ ] Papéis e permissões, confirmação de e-mail e recuperação de senha
-- [ ] Tradução do formulário de login para pt-BR
+- [x] Confirmação de e-mail, recuperação de senha e tradução do login para pt-BR
+- [x] Navegação lateral do dashboard
+- [ ] Conteúdo das páginas Indicadores e Comparativos
+- [ ] Papéis e permissões
 - [ ] Pipeline de CI (lint e build em cada PR)
