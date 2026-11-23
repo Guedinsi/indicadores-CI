@@ -39,4 +39,9 @@ Thumbs.db
 # Dados baixados das bases públicas (se forem grandes)
 data/raw/
 *.csv
+!docs/dados/csv/eixos.csv
+!docs/dados/csv/indicadores-*.csv
+!docs/dados/csv/valores-ipplan.csv
+!docs/dados/csv/valores-pdf-manual.csv
+!docs/dados/csv/removidos-ipplan.csv
 *.xlsx
