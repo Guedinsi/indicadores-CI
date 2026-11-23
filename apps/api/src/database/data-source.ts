@@ -3,8 +3,6 @@ import { config } from 'dotenv';
 import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 
-// Este arquivo roda a partir de dist/database/ (a CLI usa a versão compilada).
-// Raiz do repositório = 4 níveis acima: dist/database -> dist -> api -> apps -> raiz.
 const here = import.meta.dirname;
 config({
   path: [join(here, '../../../../.env'), join(process.cwd(), '.env')],

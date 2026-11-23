@@ -1,5 +1,3 @@
-// Cliente da API usado pelo dashboard.
-// NEXT_PUBLIC_API_URL é embutida no build do Next (veja o web.Dockerfile).
 export const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
 ).replace(/\/$/, "");
@@ -13,11 +11,24 @@ export type Axis = {
   indicatorCount: number;
 };
 
+export type IndicatorKind = "TOTAL" | "RATE" | null;
+export type IndicatorPolarity = "HIGHER_BETTER" | "LOWER_BETTER" | null;
+
+export type IndicatorSummary = {
+  code: string;
+  name: string;
+  unit: string | null;
+  kind: IndicatorKind;
+  polarity: IndicatorPolarity;
+};
+
 export type IndicatorCard = {
   code: string;
   name: string;
   description: string | null;
   unit: string | null;
+  kind: IndicatorKind;
+  polarity: IndicatorPolarity;
   axisSlug: string;
   axisAbbreviation: string | null;
   /** Período do valor mostrado; null quando não há dado. */
@@ -29,7 +40,7 @@ export type IndicatorCard = {
 export type SeriesPoint = { period: string; value: number | null };
 
 export type SeriesResponse = {
-  indicator: { code: string; name: string; unit: string | null };
+  indicator: IndicatorSummary;
   territory: { code: string; name: string; type: string };
   points: SeriesPoint[];
 };
@@ -41,7 +52,7 @@ export type ComparisonItem = {
 };
 
 export type ComparisonResponse = {
-  indicator: { code: string; name: string; unit: string | null };
+  indicator: IndicatorSummary;
   period: string | null;
   values: ComparisonItem[];
 };
@@ -65,8 +76,11 @@ export const api = {
   periods: () => get<string[]>("/periods"),
   indicators: (axis?: string, period?: string) =>
     get<IndicatorCard[]>("/indicators/latest", { axis, period }),
-  series: (code: string) =>
-    get<SeriesResponse>(`/indicators/${encodeURIComponent(code)}/values`),
+  /** Série de um território; sem `territory`, a do município. */
+  series: (code: string, territory?: string) =>
+    get<SeriesResponse>(`/indicators/${encodeURIComponent(code)}/values`, {
+      territory,
+    }),
   comparison: (code: string, period?: string) =>
     get<ComparisonResponse>(
       `/indicators/${encodeURIComponent(code)}/comparison`,

@@ -82,6 +82,8 @@ let values: {
       name: 'IFDM',
       description: 'Índice Firjan de Desenvolvimento Municipal',
       unit: 'índice',
+      kind: 'RATE',
+      polarity: 'HIGHER_BETTER',
       axis: {
         slug: 'desenvolvimento',
         abbreviation: 'DE',
@@ -104,6 +106,8 @@ let values: {
         name: 'IFDM',
         description: 'Índice Firjan de Desenvolvimento Municipal',
         unit: 'índice',
+        kind: 'RATE',
+        polarity: 'HIGHER_BETTER',
         axisSlug: 'desenvolvimento',
         axisAbbreviation: 'DE',
         period: '2016',
@@ -159,7 +163,6 @@ it('retorna a série temporal de um indicador', async () => {
     findOne: vi.fn().mockResolvedValue(territory),
   };
 
-  // Substitui temporariamente o repositório de territórios no serviço.
   (service as unknown as { territories: typeof territories }).territories =
     territories;
 
@@ -250,5 +253,33 @@ it('retorna valores vazios quando o indicador não possui períodos', async () =
   });
 
   expect(values.find).not.toHaveBeenCalled();
+});
+
+it('sem período informado, compara no período mais recente em que o município tem valor', async () => {
+  indicators.findOne.mockResolvedValue({ id: 5, code: 'GP-005', name: 'PIB per capita', unit: 'R$' });
+  valueFindOne.mockResolvedValueOnce({ period: '2023' });
+  values.find.mockResolvedValue([]);
+
+  const result = await service.comparison('GP-005');
+
+  expect(result.period).toBe('2023');
+  expect(valueFindOne).toHaveBeenCalledTimes(1);
+  expect(valueFindOne.mock.calls[0][0].where.territory).toEqual({
+    type: TerritoryType.MUNICIPALITY,
+    code: '4104303',
+  });
+  expect(values.find.mock.calls[0][0].where).toEqual({ indicatorId: 5, period: '2023' });
+});
+
+it('se o município não tem valor, usa o período mais recente de qualquer território', async () => {
+  indicators.findOne.mockResolvedValue({ id: 6, code: 'X', name: 'X', unit: null });
+  valueFindOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ period: '2021' });
+  values.find.mockResolvedValue([]);
+
+  const result = await service.comparison('X');
+
+  expect(result.period).toBe('2021');
+  expect(valueFindOne).toHaveBeenCalledTimes(2);
+  expect(valueFindOne.mock.calls[1][0].where.territory).toBeUndefined();
 });
 });
