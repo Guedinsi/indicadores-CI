@@ -138,7 +138,7 @@ export default function ComparativosPage() {
     <DashboardShell>
       <div className="mx-auto max-w-7xl">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
+          <h1 className="text-3xl font-bold text-green-700">
             Comparativos
           </h1>
 
@@ -157,7 +157,7 @@ export default function ComparativosPage() {
           </div>
         )}
 
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mb-8 rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-slate-900">
               Filtros
@@ -302,7 +302,7 @@ export default function ComparativosPage() {
 
                   <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className="h-full rounded-full bg-slate-800 transition-all"
+                      className="h-full rounded-full bg-green-600 transition-all"
                       style={{
                         width:
                           item.value === null
