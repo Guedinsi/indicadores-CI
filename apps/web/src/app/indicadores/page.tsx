@@ -213,14 +213,14 @@ export default function IndicadoresPage() {
                   aria-pressed={selecionado === item.code}
                   className={`rounded-2xl border p-5 text-left shadow-sm transition hover:shadow-md ${
                     selecionado === item.code
-                      ? "border-blue-600 bg-blue-50"
+                      ? "border-green-600 bg-green-50"
                       : "border-slate-200 bg-white"
                   }`}
                 >
                   <p className="text-sm font-medium text-slate-500">
                     {item.name}
                   </p>
-                  <p className="mt-3 text-3xl font-bold text-slate-900">
+                  <p className="mt-3 text-3xl font-bold text-green-700">
                     {formatarValor(item.value)}
                   </p>
                   {item.value !== null && item.unit && (
@@ -264,7 +264,7 @@ export default function IndicadoresPage() {
                     </span>
                     <div className="h-6 flex-1 overflow-hidden rounded-md bg-slate-100">
                       <div
-                        className="h-full rounded-md bg-slate-800"
+                        className="h-full rounded-md bg-green-600"
                         style={{
                           width: `${
                             Math.max(

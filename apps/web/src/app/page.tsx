@@ -146,7 +146,7 @@ function Comparativo({
             <div className="h-6 flex-1 overflow-hidden rounded-md bg-slate-100">
               <div
                 className={`h-full rounded-md ${
-                  destaque ? "bg-slate-900" : "bg-slate-400"
+                  destaque ? "bg-green-600" : "bg-green-300"
                 }`}
                 style={{ width: `${largura}%` }}
               />
@@ -265,10 +265,10 @@ export default function Home() {
 
   return (
   <DashboardShell>
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-green-50">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-8">
-          <div className="rounded-2xl bg-slate-900 px-6 py-8 text-white shadow-lg">
+<div className="rounded-2xl bg-green-600 px-6 py-8 text-white shadow-lg">
             <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
               <div>
                 <p className="mb-2 text-sm font-medium uppercase tracking-wider text-slate-400">
@@ -286,7 +286,7 @@ export default function Home() {
 
               <div className="flex flex-col items-start gap-3 md:items-end">
                 <AuthLink />
-                <div className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-4">
+                <div className="rounded-xl border border-green-400 bg-green-700 px-5 py-4">
                   <p className="text-xs uppercase tracking-wide text-slate-400">
                     Município
                   </p>
@@ -329,7 +329,7 @@ export default function Home() {
                     <p className="text-sm font-medium text-slate-500">
                       {indicador.name}
                     </p>
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
+                    <p className="mt-3 text-3xl font-bold text-green-700">
                       {formatarValor(indicador.value)}
                     </p>
                     {indicador.value !== null &&
@@ -341,7 +341,7 @@ export default function Home() {
                         </p>
                       )}
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-green-700">
                     {indicador.axisAbbreviation ?? indicador.code.slice(0, 2)}
                   </div>
                 </div>
@@ -512,7 +512,7 @@ export default function Home() {
                   className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-600 text-xs font-bold text-white">
                       {categoria.abbreviation ??
                         categoria.name.slice(0, 2).toUpperCase()}
                     </div>
