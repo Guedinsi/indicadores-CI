@@ -29,13 +29,10 @@ export type IndicatorCard = {
   unit: string | null;
   kind: IndicatorKind;
   polarity: IndicatorPolarity;
-  /** Nome da fonte dos dados (ex.: "STN - SICONFI", "Levantamento IPPLAN"). */
   source: string | null;
   axisSlug: string;
   axisAbbreviation: string | null;
-  /** Período do valor mostrado; null quando não há dado. */
   period: string | null;
-  /** null = sem dado. */
   value: number | null;
 };
 
@@ -78,7 +75,6 @@ export const api = {
   periods: () => get<string[]>("/periods"),
   indicators: (axis?: string, period?: string) =>
     get<IndicatorCard[]>("/indicators/latest", { axis, period }),
-  /** Série de um território; sem `territory`, a do município. */
   series: (code: string, territory?: string) =>
     get<SeriesResponse>(`/indicators/${encodeURIComponent(code)}/values`, {
       territory,
