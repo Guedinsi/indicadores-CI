@@ -72,9 +72,12 @@ Edite o `.env` e troque ao menos a senha do banco. **Nunca** faça commit do `.e
 | `NEXT_PUBLIC_WEB_URL` | URL do site, usada pelo SuperTokens no navegador. Também embutida no build. |
 | `API_URL_INTERNAL` | URL da API acessada pelo servidor do Next dentro do Docker (`http://api:3001`). |
 | `CITY_IBGE_CODE` | (Opcional) Código IBGE do município exibido no dashboard. Padrão `4104303` (Campo Mourão). |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | Servidor de e-mail da confirmação de conta e da redefinição de senha. Em desenvolvimento, o Mailpit (`localhost:1025`, sem usuário). Em produção, um SMTP real (`SMTP_SECURE=true` na porta 465). |
-| `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | Remetente dos e-mails. |
+| `EMAIL_SERVICE` | Por onde saem os e-mails de confirmação de conta e de redefinição de senha: `mailpit` (caixa de teste local, padrão), `gmail` ou `smtp` (outro provedor). Veja [`docs/EMAIL-PRODUCAO.md`](docs/EMAIL-PRODUCAO.md). |
+| `MAILPIT_HOST`, `MAILPIT_SMTP_PORT` | Onde a API encontra o Mailpit (`localhost:1025`; no Docker o compose usa `mailpit`). Só no modo `mailpit`. |
 | `MAIL_UI_PORT` | Porta da caixa de entrada do Mailpit (padrão `8025`). |
+| `SMTP_USER`, `SMTP_PASSWORD` | Conta de envio: no modo `gmail`, o endereço Gmail e a senha de app; no modo `smtp`, a credencial do provedor. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | Servidor do provedor, só no modo `smtp` (`SMTP_SECURE=true` na porta 465, `false` na 587). |
+| `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | Nome e endereço do remetente. No modo `gmail`, o endereço é sempre o da conta. |
 | `PASSWORD_BREACH_CHECK` | `true` recusa senhas que aparecem em vazamentos conhecidos (consulta o Have I Been Pwned). |
 | `RATE_LIMIT_AUTH`, `RATE_LIMIT_GERAL` | Limite de requisições por IP: login/cadastro (a cada 15 min) e demais rotas da API (por minuto). |
 | `TRUST_PROXY` | Em produção atrás de proxy reverso, para o limite usar o IP real do cliente. Vazio em desenvolvimento. |
@@ -152,7 +155,7 @@ As fontes de cada indicador, o período coberto, a conferência com o documento 
 
 ## Autenticação (SuperTokens)
 
-Login e cadastro por e-mail e senha, com sessão por cookie, confirmação de e-mail obrigatória e redefinição de senha. O core do SuperTokens roda em um container e guarda usuários e sessões em um banco `supertokens` no mesmo PostgreSQL. Os e-mails saem pelo SMTP configurado no `.env`; em desenvolvimento, caem no Mailpit (http://localhost:8025) e não chegam a ninguém de verdade.
+Login e cadastro por e-mail e senha, com sessão por cookie, confirmação de e-mail obrigatória e redefinição de senha. O core do SuperTokens roda em um container e guarda usuários e sessões em um banco `supertokens` no mesmo PostgreSQL. Por padrão (`EMAIL_SERVICE=mailpit`), os e-mails caem no Mailpit (http://localhost:8025) e não chegam a ninguém de verdade. Para enviar para caixas reais pelo Gmail ou por outro provedor, siga [`docs/EMAIL-PRODUCAO.md`](docs/EMAIL-PRODUCAO.md).
 
 - **API:** as rotas `/api/auth/*` (login, cadastro, logout, refresh, confirmação de e-mail e redefinição de senha) são tratadas pelo SuperTokens. O `AuthGuard` protege rotas, e `GET /api/me` devolve os dados do usuário logado.
 - **Web:** `/auth` mostra login e cadastro, e `/usuario` é a página do usuário (exige login). O botão "Entrar / Minha conta" fica no cabeçalho do dashboard.
@@ -286,5 +289,7 @@ pnpm add -D -w <pacote>          # dependência de desenvolvimento na raiz
 - [x] Confirmação de e-mail, recuperação de senha e tradução do login para pt-BR
 - [x] Navegação lateral do dashboard
 - [ ] Conteúdo das páginas Indicadores e Comparativos
+- [x] Envio de e-mail configurável (Mailpit, Gmail ou outro provedor SMTP)
+- [ ] Login com Google, X e outros provedores (OAuth)
 - [ ] Papéis e permissões
 - [ ] Pipeline de CI (lint e build em cada PR)

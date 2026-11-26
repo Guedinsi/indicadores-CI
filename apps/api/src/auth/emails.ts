@@ -24,23 +24,72 @@ function modelo(titulo: string, texto: string, botao: string, link: string): str
 </body></html>`;
 }
 
-function configuracaoSmtp(config: ConfigService) {
-  const usuario = config.get<string>('SMTP_USER');
+type Leitor = Pick<ConfigService, 'get'>;
+
+const SERVICOS = ['mailpit', 'gmail', 'smtp'] as const;
+type ServicoEmail = (typeof SERVICOS)[number];
+
+/**
+ * Por onde os e-mails saem, conforme EMAIL_SERVICE:
+ * - mailpit: caixa de teste local (http://localhost:8025). Padrão.
+ * - gmail:   conta Gmail com senha de app (SMTP_USER e SMTP_PASSWORD).
+ * - smtp:    qualquer provedor (SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASSWORD).
+ * Configuração incompleta derruba a API na subida, com a mensagem do que falta.
+ */
+export function configuracaoSmtp(config: Leitor) {
+  const texto = (chave: string, padrao = '') => (config.get<string>(chave) ?? padrao).trim();
+  const servico = (texto('EMAIL_SERVICE', 'mailpit').toLowerCase() || 'mailpit') as ServicoEmail;
+  if (!SERVICOS.includes(servico)) {
+    throw new Error(`EMAIL_SERVICE="${servico}" não existe. Use ${SERVICOS.join(', ')}.`);
+  }
+  const nome = texto('SMTP_FROM_NAME', 'Indicadores CI');
+
+  if (servico === 'mailpit') {
+    return {
+      host: texto('MAILPIT_HOST', 'localhost'),
+      port: Number(texto('MAILPIT_SMTP_PORT', '1025')),
+      secure: false,
+      authUsername: undefined,
+      password: '',
+      from: { name: nome, email: texto('SMTP_FROM_EMAIL', 'nao-responda@indicadores-ci.local') },
+    };
+  }
+
+  const usuario = texto('SMTP_USER');
+  const senha = texto('SMTP_PASSWORD').replaceAll(' ', '');
+  const faltando = [
+    servico === 'smtp' && !texto('SMTP_HOST') ? 'SMTP_HOST' : null,
+    !usuario ? 'SMTP_USER' : null,
+    !senha ? 'SMTP_PASSWORD' : null,
+  ].filter(Boolean);
+  if (faltando.length > 0) {
+    throw new Error(`EMAIL_SERVICE=${servico} exige ${faltando.join(', ')} no .env.`);
+  }
+
+  if (servico === 'gmail') {
+    // O Gmail só envia com o endereço da própria conta como remetente.
+    return {
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      authUsername: usuario,
+      password: senha,
+      from: { name: nome, email: usuario },
+    };
+  }
+
   return {
-    host: config.get<string>('SMTP_HOST', 'localhost'),
-    port: Number(config.get<string>('SMTP_PORT', '1025')),
-    secure: config.get<string>('SMTP_SECURE', 'false') === 'true',
-    authUsername: usuario || undefined,
-    password: config.get<string>('SMTP_PASSWORD', ''),
-    from: {
-      name: config.get<string>('SMTP_FROM_NAME', 'Indicadores CI'),
-      email: config.get<string>('SMTP_FROM_EMAIL', 'nao-responda@indicadores-ci.local'),
-    },
+    host: texto('SMTP_HOST'),
+    port: Number(texto('SMTP_PORT', '587')),
+    secure: texto('SMTP_SECURE', 'false') === 'true',
+    authUsername: usuario,
+    password: senha,
+    from: { name: nome, email: texto('SMTP_FROM_EMAIL') || usuario },
   };
 }
 
 /** E-mail de confirmação de endereço, em português. */
-export function criarEnvioConfirmacaoEmail(config: ConfigService) {
+export function criarEnvioConfirmacaoEmail(config: Leitor) {
   return new SMTPEmailVerification({
     smtpSettings: configuracaoSmtp(config),
     override: (original) => ({
@@ -61,7 +110,7 @@ export function criarEnvioConfirmacaoEmail(config: ConfigService) {
 }
 
 /** E-mail de redefinição de senha, em português. */
-export function criarEnvioRedefinicaoSenha(config: ConfigService) {
+export function criarEnvioRedefinicaoSenha(config: Leitor) {
   return new SMTPEmailPassword({
     smtpSettings: configuracaoSmtp(config),
     override: (original) => ({
