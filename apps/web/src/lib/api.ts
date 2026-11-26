@@ -29,6 +29,8 @@ export type IndicatorCard = {
   unit: string | null;
   kind: IndicatorKind;
   polarity: IndicatorPolarity;
+  /** Nome da fonte dos dados (ex.: "STN - SICONFI", "Levantamento IPPLAN"). */
+  source: string | null;
   axisSlug: string;
   axisAbbreviation: string | null;
   /** Período do valor mostrado; null quando não há dado. */

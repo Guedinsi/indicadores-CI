@@ -116,7 +116,7 @@ Ao digitar novos valores do PDF, não repita períodos que já vêm de um script
 
 `indicadores-pdf-manual.csv` (catálogo) e `valores-pdf-manual.csv` (valores) guardam o que está no documento do IPPLAN
 e não foi encontrado em base pública que dê para baixar por script. São importados pelo `setup-dados.sh` como os
-outros. A fonte no banco é "Documento Indicadores Campo Mourão 2026 (IPPLAN)"; a fonte original e a página do PDF
+outros. A fonte no banco (e nos cards do painel) é "Levantamento IPPLAN"; a fonte original e a página do PDF
 estão na descrição de cada indicador. Para corrigir ou acrescentar um valor, edite o CSV e rode o `setup-dados.sh`.
 
 | Códigos | O que é | Período | Por que não é automático |

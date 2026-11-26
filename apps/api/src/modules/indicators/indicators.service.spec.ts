@@ -23,6 +23,7 @@ let values: {
     valueFindOne = vi.fn();
     indicatorQuery = {
       innerJoinAndSelect: vi.fn(),
+      leftJoinAndSelect: vi.fn(),
       orderBy: vi.fn(),
       addOrderBy: vi.fn(),
       where: vi.fn(),
@@ -84,6 +85,7 @@ let values: {
       unit: 'índice',
       kind: 'RATE',
       polarity: 'HIGHER_BETTER',
+      dataSource: { name: 'FIRJAN' },
       axis: {
         slug: 'desenvolvimento',
         abbreviation: 'DE',
@@ -108,6 +110,7 @@ let values: {
         unit: 'índice',
         kind: 'RATE',
         polarity: 'HIGHER_BETTER',
+        source: 'FIRJAN',
         axisSlug: 'desenvolvimento',
         axisAbbreviation: 'DE',
         period: '2016',

@@ -229,6 +229,11 @@ export default function IndicadoresPage() {
                   <p className="mt-3 text-xs text-slate-400">
                     {item.period ? `Referência: ${item.period}` : "Sem dados"}
                   </p>
+                  {item.source && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Fonte: {item.source}
+                    </p>
+                  )}
                 </button>
               ))}
             </div>

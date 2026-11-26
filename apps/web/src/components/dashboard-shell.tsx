@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { VoltarAoTopo } from "@/components/voltar-ao-topo";
 
 const links = [
   { href: "/", label: "Visão geral", icon: "◫" },
@@ -20,7 +21,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-green-50 md:flex">
-      <aside className="w-full bg-green-800 text-white md:min-h-screen md:w-64 md:shrink-0">
+      <aside className="w-full bg-green-800 text-white md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
         <div className="border-b border-white/15 px-6 py-7">
           <h1 className="text-xl font-bold">Indicadores CI</h1>
           <p className="mt-1 text-xs text-green-100">
@@ -53,6 +54,8 @@ export function DashboardShell({
       <main className="min-w-0 flex-1 p-4 md:p-8">
         {children}
       </main>
+
+      <VoltarAoTopo />
     </div>
   );
 }

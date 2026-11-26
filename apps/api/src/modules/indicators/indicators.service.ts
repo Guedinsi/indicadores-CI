@@ -27,6 +27,8 @@ export interface IndicatorCardResponse {
   unit: string | null;
   kind: IndicatorKind | null;
   polarity: IndicatorPolarity | null;
+  /** Nome da fonte dos dados (ex.: "STN - SICONFI", "Levantamento IPPLAN"); null se não cadastrada. */
+  source: string | null;
   axisSlug: string;
   axisAbbreviation: string | null;
   /** Período do valor retornado (ou o período pedido, quando não há valor). */
@@ -124,6 +126,7 @@ export class IndicatorsService {
     const qb = this.indicators
       .createQueryBuilder('i')
       .innerJoinAndSelect('i.axis', 'a')
+      .leftJoinAndSelect('i.dataSource', 'd')
       .orderBy('a.name', 'ASC')
       .addOrderBy('i.name', 'ASC');
     if (axisSlug) qb.where('a.slug = :axisSlug', { axisSlug });
@@ -155,6 +158,7 @@ export class IndicatorsService {
         unit: i.unit,
         kind: i.kind,
         polarity: i.polarity,
+        source: i.dataSource?.name ?? null,
         axisSlug: i.axis.slug,
         axisAbbreviation: i.axis.abbreviation,
         period: v?.period ?? period ?? null,

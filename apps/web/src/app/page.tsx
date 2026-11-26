@@ -318,6 +318,91 @@ export default function Home() {
             </p>
           </div>
 
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-slate-900">Filtros</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Selecione os critérios para visualizar os indicadores.
+              </p>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              <div>
+                <label
+                  htmlFor="categoria"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Categoria
+                </label>
+
+                <select
+                  id="categoria"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
+                  value={categoriaSelecionada}
+                  onChange={(e) => {
+                    setCategoriaSelecionada(e.target.value);
+                    setIndicadorSelecionado("todos");
+                    setMostrarTodos(false);
+                  }}
+                >
+                  <option value="todas">Todas</option>
+                  {categorias.map((categoria) => (
+                    <option key={categoria.slug} value={categoria.slug}>
+                      {categoria.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="indicador"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Indicador
+                </label>
+
+                <select
+                  id="indicador"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
+                  value={indicadorSelecionado}
+                  onChange={(e) => setIndicadorSelecionado(e.target.value)}
+                >
+                  <option value="todos">Todos</option>
+                  {listaIndicadores.map((indicador) => (
+                    <option key={indicador.code} value={indicador.code}>
+                      {indicador.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="periodo"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Período
+                </label>
+
+                <select
+                  id="periodo"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
+                  value={periodoSelecionado}
+                  onChange={(e) => setPeriodoSelecionado(e.target.value)}
+                >
+                  <option value="todos">Mais recente</option>
+                  {periodos.map((periodo) => (
+                    <option key={periodo} value={periodo}>
+                      {periodo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {indicadoresVisiveis.map((indicador) => (
               <div
@@ -355,6 +440,11 @@ export default function Home() {
                       ? `Sem dados em ${indicador.period}`
                       : "Sem dados"}
                 </p>
+                {indicador.source && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Fonte: {indicador.source}
+                  </p>
+                )}
               </div>
             ))}
 
@@ -400,89 +490,6 @@ export default function Home() {
           )}
         </section>
 
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-lg font-bold text-slate-900">Filtros</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Selecione os critérios para visualizar os indicadores.
-            </p>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            <div>
-              <label
-                htmlFor="categoria"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Categoria
-              </label>
-
-              <select
-                id="categoria"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
-                value={categoriaSelecionada}
-                onChange={(e) => {
-                  setCategoriaSelecionada(e.target.value);
-                  setIndicadorSelecionado("todos");
-                  setMostrarTodos(false);
-                }}
-              >
-                <option value="todas">Todas</option>
-                {categorias.map((categoria) => (
-                  <option key={categoria.slug} value={categoria.slug}>
-                    {categoria.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="indicador"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Indicador
-              </label>
-
-              <select
-                id="indicador"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
-                value={indicadorSelecionado}
-                onChange={(e) => setIndicadorSelecionado(e.target.value)}
-              >
-                <option value="todos">Todos</option>
-                {listaIndicadores.map((indicador) => (
-                  <option key={indicador.code} value={indicador.code}>
-                    {indicador.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="periodo"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Período
-              </label>
-
-              <select
-                id="periodo"
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 focus:bg-white"
-                value={periodoSelecionado}
-                onChange={(e) => setPeriodoSelecionado(e.target.value)}
-              >
-                <option value="todos">Mais recente</option>
-                {periodos.map((periodo) => (
-                  <option key={periodo} value={periodo}>
-                    {periodo}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </section>
 
         <section className="mb-8">
           <div className="mb-4">
